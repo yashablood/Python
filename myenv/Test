@@ -1,0 +1,6 @@
+import os
+print(os.getcwd())
+
+os.chdir('C:\\Users\\Puffy Cloud McGee\\Documents\\Programming\\Python')  # Change to your desired directory
+
+print(os.listdir())
