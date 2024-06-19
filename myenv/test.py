@@ -303,16 +303,17 @@ data_entry.pack()
 append_data_button = tk.Button(frame, text="Append Data", command=append_data_to_file)
 append_data_button.pack()
 
-tk.Label(frame, text="New Sheet Name:").pack()
-new_sheet_name_entry = tk.Entry(frame)
-new_sheet_name_entry.pack()
+    #Add these on another optional page
+#tk.Label(frame, text="New Sheet Name:").pack()
+#new_sheet_name_entry = tk.Entry(frame)
+#new_sheet_name_entry.pack()
 
-tk.Label(frame, text="New Column Name:").pack()
-new_column_name_entry = tk.Entry(frame)
-new_column_name_entry.pack()
+#tk.Label(frame, text="New Column Name:").pack()
+#new_column_name_entry = tk.Entry(frame)
+#new_column_name_entry.pack()
 
-add_new_button = tk.Button(frame, text="Add Sheet/Column", command=add_new_sheet_or_column)
-add_new_button.pack()
+#add_new_button = tk.Button(frame, text="Add Sheet/Column", command=add_new_sheet_or_column)
+#add_new_button.pack()
 
 # Add a text widget for showing results
 result_text = tk.Text(root, height=10, width=80)
