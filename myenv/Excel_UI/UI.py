@@ -168,6 +168,70 @@ def create_recognitions_window():
 
 def create_error_tracker_window():
     # Define specific widgets and layout for 'Error Tracker' sheet
+
+    global file_path
+
+    # Destroy previous widgets in the sheet window
+    for widget in sheet_window_frame.winfo_children():
+        widget.destroy()
+
+    Error_Tracker_df = pd.read_excel(file_path, sheet_name='Error Tracker')
+    column_names = Error_Tracker_df.columns
+
+    tk.Label(sheet_window_frame, text="Error Tracker Sheet", font=("Arial", 14)).grid(row=0, column=0, columnspan=2, pady=(0, 10))
+
+    # Dynamically create labels and entry fields for each column
+    entry_fields = {}
+    row_index = 1  # Start row index for entries
+    for column_name in column_names:
+        tk.Label(sheet_window_frame, text=f"{column_name}:").grid(row=row_index, column=0, sticky=tk.W, pady=(5, 5))
+
+        if column_name.lower() == "date":  # Check for "Date" column
+            # DateEntry widget for date and time input (military time)
+            entry_fields[column_name] = DateEntry(sheet_window_frame, date_pattern="dd-mm-yyyy")
+            entry_fields[column_name].grid(row=row_index, column=1, sticky=tk.W, pady=(5, 5))
+
+            # Button to add current date
+            add_date_button = tk.Button(sheet_window_frame, text="Add Current Date",
+                command=lambda field=entry_fields[column_name]: add_current_date(field))
+            add_date_button.grid(row=row_index, column=2, sticky=tk.W, padx=(10, 0))  # Add some padding
+
+        else:
+            entry_fields[column_name] = tk.Entry(sheet_window_frame)
+            entry_fields[column_name].grid(row=row_index, column=1, columnspan=2, sticky=tk.W + tk.E, pady=(5, 5))
+
+        row_index += 1  # Move to the next row for the next entry
+
+    # Function to submit error data
+    def submit_error():
+        global file_path
+        sheet_name = 'Error Tracker'
+        Error_Tracker_df = pd.read_excel(file_path, sheet_name=sheet_name)
+        column_names = Error_Tracker_df.columns
+
+        data = {}
+        for column_name in column_names:
+            if isinstance(entry_fields[column_name], DateEntry):
+                # Format date in "dd-mmm-yyyy" format
+                data[column_name] = entry_fields[column_name].get_date().strftime("%d-%b-%Y")
+            else:
+                data[column_name] = entry_fields[column_name].get().strip()
+
+        if not all(data.values()):
+            messagebox.showwarning("Warning", "Please fill in all fields.")
+            return
+
+        result = append_data(file_path, "Error Tracker", data)
+        result_text.insert(tk.END, result + "\n")
+
+    # Button to submit error data
+    submit_button = tk.Button(sheet_window_frame, text="Submit Error", command=submit_error)
+    submit_button.grid(row=row_index, column=0, columnspan=3, pady=10)
+
+    # Ensure the main window updates correctly after adding widgets
+    sheet_window_frame.update_idletasks()
+
+
     pass
 
 def create_production_window():
