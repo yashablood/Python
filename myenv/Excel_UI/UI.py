@@ -12,6 +12,7 @@ from openpyxl.styles import Alignment
 import tkcalendar
 from tkcalendar import DateEntry
 
+
 # Global variables
 file_path = None
 current_sheet_name = None
