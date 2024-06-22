@@ -126,7 +126,7 @@ def create_recognitions_window():
 
             # Button to add current date
             add_date_button = tk.Button(sheet_window_frame, text="Add Current Date",
-                                        command=lambda field=entry_fields[column_name]: add_current_date(field))
+                command=lambda field=entry_fields[column_name]: add_current_date(field))
             add_date_button.grid(row=row_index, column=2, sticky=tk.W, padx=(10, 0))  # Add some padding
 
         else:
