@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 from openpyxl import load_workbook
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment
+import tkcalendar
+from tkcalendar import DateEntry
 
 # Global variables
 file_path = None
@@ -20,26 +23,6 @@ script_dir = os.path.dirname(__file__)
 file_path = 'Boxing Tier.xlsx'
 print("File path:", os.path.abspath(file_path))
 
-def adjust_column_widths(ws):
-    for col in ws.iter_cols():
-        max_length = 0
-        column_letter = get_column_letter(col[0].column)
-        for cell in col:
-            try:
-                # Skip merged cells
-                if cell.is_merged_cell:
-                    continue
-                
-                # Calculate the length of the cell value
-                if cell.value and len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except Exception as e:
-                print(f"Error processing cell {cell.coordinate}: {e}")
-
-        adjusted_width = (max_length + 2) * 1.2
-        ws.column_dimensions[column_letter].width = adjusted_width
-
-
 # Specify the worksheet name where the data resides
 def process_file(file_path):
     try:    
@@ -51,7 +34,6 @@ def process_file(file_path):
             # Read data from the worksheet
             df = pd.read_excel(file_path, sheet_name=worksheet_name,)
             ws = wb[worksheet_name]
-            adjust_column_widths(ws)
 
             # Read required sheets
             Dashboard_Rev_2_df = pd.read_excel(file_path, sheet_name='Dashboard Rev 2')
@@ -120,23 +102,69 @@ def create_data_window():
     pass
 
 def create_recognitions_window():
-    # Define specific widgets and layout for 'Recognitions' sheet
-    def update_column_names(event=None):
-        try:
-            global file_path
-            wb = load_workbook(filename=file_path)
-            sheet_name = sheet_name_combobox.get()
-            ws = wb[sheet_name]
-            column_names = []
+    global file_path
 
-                # Ensure that we are only getting column names from the first row
-            for cell in ws[1]:
-            #if cell.value is not None:  # Skip if the cell is empty
-                column_names.append(cell.value)
-                create_dynamic_form(column_names)
-        except Exception as e:
-            result_text.insert(tk.END, f"An error occurred: {e}\n")                
-        pass
+    # Destroy previous widgets in the sheet window
+    for widget in sheet_window_frame.winfo_children():
+        widget.destroy()
+
+    Recognitions_df = pd.read_excel(file_path, sheet_name='Recognitions')
+    column_names = Recognitions_df.columns
+
+    tk.Label(sheet_window_frame, text="Recognitions Sheet", font=("Arial", 14)).grid(row=0, column=0, columnspan=2, pady=(0, 10))
+
+    # Dynamically create labels and entry fields for each column
+    entry_fields = {}
+    row_index = 1  # Start row index for entries
+    for column_name in column_names:
+        tk.Label(sheet_window_frame, text=f"{column_name}:").grid(row=row_index, column=0, sticky=tk.W, pady=(5, 5))
+
+        if column_name.lower() == "date":  # Check for "Date" column
+            # DateEntry widget for date and time input (military time)
+            entry_fields[column_name] = DateEntry(sheet_window_frame, date_pattern="dd-mm-yyyy")
+            entry_fields[column_name].grid(row=row_index, column=1, sticky=tk.W, pady=(5, 5))
+
+            # Button to add current date
+            add_date_button = tk.Button(sheet_window_frame, text="Add Current Date",
+                                        command=lambda field=entry_fields[column_name]: add_current_date(field))
+            add_date_button.grid(row=row_index, column=2, sticky=tk.W, padx=(10, 0))  # Add some padding
+
+        else:
+            entry_fields[column_name] = tk.Entry(sheet_window_frame)
+            entry_fields[column_name].grid(row=row_index, column=1, columnspan=2, sticky=tk.W + tk.E, pady=(5, 5))
+
+        row_index += 1  # Move to the next row for the next entry
+
+    # Function to submit recognition data
+    def submit_recognition():
+        global file_path
+        sheet_name = 'Recognitions'
+        Recognitions_df = pd.read_excel(file_path, sheet_name=sheet_name)
+        column_names = Recognitions_df.columns
+
+        data = {}
+        for column_name in column_names:
+            if isinstance(entry_fields[column_name], DateEntry):
+                # Format date in "dd-mmm-yyyy" format
+                data[column_name] = entry_fields[column_name].get_date().strftime("%d-%b-%Y")
+            else:
+                data[column_name] = entry_fields[column_name].get().strip()
+
+        if not all(data.values()):
+            messagebox.showwarning("Warning", "Please fill in all fields.")
+            return
+
+        result = append_data(file_path, "Recognitions", data)
+        result_text.insert(tk.END, result + "\n")
+
+    # Button to submit recognition data
+    submit_button = tk.Button(sheet_window_frame, text="Submit Recognition", command=submit_recognition)
+    submit_button.grid(row=row_index, column=0, columnspan=3, pady=10)
+
+    # Ensure the main window updates correctly after adding widgets
+    sheet_window_frame.update_idletasks()
+
+    pass
 
 def create_error_tracker_window():
     # Define specific widgets and layout for 'Error Tracker' sheet
@@ -151,60 +179,23 @@ def create_otif_window():
     pass
 
     
-#def update_column_names(event=None):
-    #try:
-        #global file_path
-        #wb = load_workbook(filename=file_path)
-        #sheet_name = sheet_name_combobox.get()
-        #ws = wb[sheet_name]
-        #column_names = []
-
-        # Ensure that we are only getting column names from the first row
-        #for cell in ws[1]:
-            #if cell.value is not None:  # Skip if the cell is empty
-                #column_names.append(cell.value)
-
-        #create_dynamic_form(column_names)
-    #except Exception as e:
-        #result_text.insert(tk.END, f"An error occurred: {e}\n")
-
-def create_dynamic_form(column_names):
-    for widget in dynamic_frame.winfo_children():
-        widget.destroy()
-
-    #global entries
-    #entries = {}
-
-    for column in column_names:
-        if column is None:
-            continue  # Skip if column name is None
-
-
-        label = tk.Label(dynamic_frame, text=column)
-        label.pack()
-
-        if column.lower().startswith("date"):
-            entry = tk.Entry(dynamic_frame)
-        elif column.lower().startswith("long text"):
-            entry = tk.Text(dynamic_frame, height=4, width=30)
-        else:
-            entry = tk.Entry(dynamic_frame)
-        entry.pack()
-        
-        entries[column] = entry
 
 def append_data_to_file():
-    file_path = file_path_label.cget("text")
-    if file_path == "No file selected":
+    global file_path
+    if not file_path:
         messagebox.showwarning("Warning", "Please select a file first.")
         return
-    
 
     sheet_name = sheet_name_combobox.get()
-    #column_name = column_name_combobox.get()
-    #sheet_name = sheet_name_entry.get()
-    #column_name = column_name_entry.get()
-    #data = data_entry.get()
+    if not sheet_name:
+        messagebox.showwarning("Warning", "Please select a sheet name.")
+        return
+
+    # Validate if entries have been initialized
+    if not entries:
+        messagebox.showwarning("Warning", "No data fields found.")
+        return
+        
     data = {}
     for column, entry in entries.items():
         if isinstance(entry, tk.Text):
@@ -212,22 +203,40 @@ def append_data_to_file():
         else:
             data[column] = entry.get().strip()
 
-    if not sheet_name or not data:
-        messagebox.showwarning("Warning", "Please fill in all fields.")
+
+    # Validate if any of the data fields are empty
+    if not data[column]:
+        messagebox.showwarning("Warning", f"Please fill in the '{column}' field.")
         return
 
     result = append_data(file_path, sheet_name, data)
     result_text.insert(tk.END, result + "\n")
+
+def add_current_date(date_field):
+    import datetime
+    # Set the current date in the DateEntry field
+    date_field.set_date(datetime.date.today())
 
 def append_data(file_path, sheet_name, data):
     try:
         wb = load_workbook(file_path)
         ws = wb[sheet_name]
 
+        # Get the header row (first row)
+        header_row = ws[1]
+
+        # Initialize dictionary to map column names to their indices
+        column_index = {cell.value: cell.column for cell in header_row if cell.value}
+
         new_row = ws.max_row + 1
         for column, value in data.items():
-            col_index = ws[1].index(column) + 1
+            col_index = column_index.get(column)
+            cell = ws.cell(row=new_row, column=col_index, value=value)
             ws.cell(row=new_row, column=col_index, value=value)
+
+            # Check if the column is the date column and align the cell to the right
+            if column.lower() == "date":  # Adjust this condition to match your date column name
+                cell.alignment = Alignment(horizontal='right')
 
         wb.save(file_path)
         return "Data appended successfully!"
@@ -266,29 +275,6 @@ sheet_window_frame.pack(padx=10, pady=10)
 # Frame for dynamic entries
 dynamic_frame = tk.Frame(root)
 dynamic_frame.pack(padx=10, pady=10)
-
-#tk.Label(frame, text="Column Name:").pack()
-#column_name_combobox = ttk.Combobox(frame, state="readonly")
-#column_name_combobox.pack()
-
-#tk.Label(frame, text="Data to Append:").pack()
-#data_entry = tk.Entry(frame)
-#data_entry.pack()
-
-append_data_button = tk.Button(frame, text="Append Data", command=append_data_to_file)
-append_data_button.pack()
-
-    #Add these on another optional page
-#tk.Label(frame, text="New Sheet Name:").pack()
-#new_sheet_name_entry = tk.Entry(frame)
-#new_sheet_name_entry.pack()
-
-#tk.Label(frame, text="New Column Name:").pack()
-#new_column_name_entry = tk.Entry(frame)
-#new_column_name_entry.pack()
-
-#add_new_button = tk.Button(frame, text="Add Sheet/Column", command=add_new_sheet_or_column)
-#add_new_button.pack()
 
 # Add a text widget for showing results
 result_text = tk.Text(root, height=10, width=80)
