@@ -293,6 +293,17 @@ def append_data(file_path, sheet_name, data):
         # Initialize dictionary to map column names to their indices
         column_index = {cell.value: cell.column for cell in header_row if cell.value}
 
+        # Determine the last row with data in a specific column (e.g., Column A)
+        last_row = ws.max_row
+
+        # Ensure that the last row is correctly identified (ignoring empty rows)
+        while last_row > 0 and all(cell.value is None for cell in ws[last_row]):
+            last_row -= 1
+
+        # Increment last_row to get the next empty row
+        next_row = last_row + 1
+
+        # Iterate data in the new row
         new_row = ws.max_row + 1
         for column, value in data.items():
             col_index = column_index.get(column)
