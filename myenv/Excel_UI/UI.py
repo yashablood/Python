@@ -301,10 +301,9 @@ def append_data(file_path, sheet_name, data):
             last_row -= 1
 
         # Increment last_row to get the next empty row
-        next_row = last_row + 1
+        new_row = last_row + 1
 
         # Iterate data in the new row
-        new_row = ws.max_row + 1
         for column, value in data.items():
             col_index = column_index.get(column)
             cell = ws.cell(row=new_row, column=col_index, value=value)
