@@ -17,6 +17,7 @@ from tkcalendar import DateEntry
 file_path = None
 current_sheet_name = None
 entries = {}
+
 script_dir = os.path.dirname(__file__)
 
 # Load the Excel file
@@ -104,9 +105,9 @@ def create_data_window():
     for widget in sheet_window_frame.winfo_children():
         widget.destroy()
 
-    # Read the Excel file
+    # Read the Excel file without headers
     try:
-        Data_df = pd.read_excel(file_path, sheet_name='Data')
+        Data_df_no_header = pd.read_excel(file_path, sheet_name='Data', header=None)
     except FileNotFoundError:
         messagebox.showerror("Error", f"File not found: {file_path}")
         return
@@ -114,11 +115,21 @@ def create_data_window():
         messagebox.showerror("Error", f"File is empty: {file_path}")
         return
 
-    row_names = Data_df.iloc[1:19, 1].tolist()  # Assuming row names (labels) are in column B, rows 2 to 18
+    # Read the Excel file with headers to get date columns correctly
+    try:
+        Data_df_with_header = pd.read_excel(file_path, sheet_name='Data')
+    except FileNotFoundError:
+        messagebox.showerror("Error", f"File not found: {file_path}")
+        return
+    except pd.errors.EmptyDataError:
+        messagebox.showerror("Error", f"File is empty: {file_path}")
+        return
+
+    # Assuming row names (labels) are in column B, rows 2 to 18 (1-based indexing, thus 1:17 in 0-based indexing)
+    row_names = Data_df_no_header.iloc[1:18, 1].tolist()
 
     print("Date DataFrame:")
-    print(Data_df.head())
-
+    print(Data_df_no_header.head())
 
     tk.Label(sheet_window_frame, text="Data Sheet", font=("Arial", 14)).grid(row=0, column=0, columnspan=3, pady=(0, 10))
 
@@ -143,51 +154,50 @@ def create_data_window():
     date_entry.grid(row=start_row + len(row_names), column=1, sticky=tk.W + tk.E, pady=(5, 5))
 
     # Add a submit button to save data
-    submit_button = tk.Button(sheet_window_frame, text="Submit", command=lambda: save_data(entry_fields, date_entry.get_date()))
+    submit_button = tk.Button(sheet_window_frame, text="Submit", command=lambda: save_data(entry_fields, date_entry.get_date(), Data_df_no_header, Data_df_with_header))
     submit_button.grid(row=start_row + len(row_names) + 1, column=0, columnspan=2, pady=(10, 0))
 
     # Ensure the main window updates correctly after adding widgets
     sheet_window_frame.update_idletasks()
 
-def save_data(entry_fields, selected_date):
+def save_data(entry_fields, selected_date, Data_df_no_header, Data_df_with_header):
     global file_path
 
-    # Read the Excel file
     try:
-        Data_df = pd.read_excel(file_path, sheet_name='Data')
-    except FileNotFoundError:
-        messagebox.showerror("Error", f"File not found: {file_path}")
-        return
-    except pd.errors.EmptyDataError:
-        messagebox.showerror("Error", f"File is empty: {file_path}")
-        return
+        # Format the date
+        formatted_date = selected_date.strftime("%m/%d/%Y")
 
-    # Start processing from the third column onwards (index 2 onwards)
-    columns_to_format = Data_df.columns[2:]
+        # Ensure Data_df_with_header only contains relevant data columns (excluding non-date columns)
+        data_columns = Data_df_with_header.columns[2:]  # Assuming the first two columns are non-date columns
 
-    # Convert to datetime and format
-    Data_df.columns = pd.to_datetime(columns_to_format, format="%Y-%m-%d").strftime("%d/%m/%Y")
+        # Format the date columns into the desired format
+        formatted_columns = pd.to_datetime(data_columns, format="%m-%d-%Y %H:%M:%S").strftime("%m/%d/%Y")
 
-    # Format the selected date
-    formatted_date = selected_date.strftime("%m/%d/%Y")
+        # Check if the selected date exists in formatted columns
+        if formatted_date not in formatted_columns:
+            messagebox.showerror("Error", f"Date {formatted_date} not found in the sheet.")
+            return
 
-    # Check if the formatted_date exists in Data_df columns
-    if formatted_date not in Data_df.columns:
-        messagebox.showerror("Error", f"Date {formatted_date} not found in the sheet.")
-        return
+        # Assign formatted columns to Data_df_no_header
+        Data_df_no_header.columns = list(Data_df_with_header.columns[:2]) + list(formatted_columns)
 
-    # Append data to the correct column
-    for row_name, entry in entry_fields.items():
-        value = entry.get()
-        if value:  # If there's a value entered
-            Data_df.loc[Data_df.iloc[1:19, 1] == row_name, formatted_date] = value
+        # Append data to the correct column
+        for row_name, entry in entry_fields.items():
+            value = entry.get()
+            if value:  # If there's a value entered
+                # Locate the correct row based on the label in column B
+                row_index = Data_df_no_header[Data_df_no_header.iloc[:, 1] == row_name].index[0]
+                Data_df_no_header.loc[row_index, formatted_date] = value
 
-    # Save the updated DataFrame back to the Excel file
-    with pd.ExcelWriter(file_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-        Data_df.to_excel(writer, sheet_name='Data', index=False)
+        # Save the updated DataFrame back to the Excel file
+        with pd.ExcelWriter(file_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+            Data_df_no_header.to_excel(writer, sheet_name='Data', index=False, startrow=1)  # Start writing from row 2
 
-    messagebox.showinfo("Success", "Data has been appended successfully!")
+        messagebox.showinfo("Success", "Data has been appended successfully!")
 
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {str(e)}")
+    
     pass
 
 def create_recognitions_window():
