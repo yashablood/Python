@@ -17,7 +17,6 @@ from tkcalendar import DateEntry
 file_path = None
 current_sheet_name = None
 entries = {}
-
 script_dir = os.path.dirname(__file__)
 
 # Load the Excel file
@@ -99,15 +98,13 @@ def create_dashboard_rev_2_window():
     pass
 
 def create_data_window():
-    # Define specific widgets and layout for 'Data' sheet
-
     global file_path
 
     # Destroy previous widgets in the sheet window
     for widget in sheet_window_frame.winfo_children():
         widget.destroy()
 
-       # Read the Excel file
+    # Read the Excel file
     try:
         Data_df = pd.read_excel(file_path, sheet_name='Data')
     except FileNotFoundError:
@@ -117,31 +114,79 @@ def create_data_window():
         messagebox.showerror("Error", f"File is empty: {file_path}")
         return
 
-    row_name = Data_df.index
+    row_names = Data_df.iloc[1:19, 1].tolist()  # Assuming row names (labels) are in column B, rows 2 to 18
+
+    print("Date DataFrame:")
+    print(Data_df.head())
+
 
     tk.Label(sheet_window_frame, text="Data Sheet", font=("Arial", 14)).grid(row=0, column=0, columnspan=3, pady=(0, 10))
 
-    # Dynamically create labels and entry fields for each column
+    # Dynamically create labels and entry fields for each row
     entry_fields = {}
-    labels = Data_df.iloc[1:19, 1].tolist()
     start_row = 1  # Start row index for entries
-    column_index = 0  # Start column index for entries
+    column_index = 0  # Fixed column index for labels
 
-    for row_name in row_name:
-        # Calculate row index for each column (assuming you want to start at row 2)
-        row_index = start_row
+    for i, row_name in enumerate(row_names):
+        # Calculate row index for each label and entry field
+        row_index = start_row + i
 
-        # Adjust row and column indices based on your requirement
-        tk.Label(sheet_window_frame, text=f"{labels}:").grid(row=row_index, column=column_index, sticky=tk.W, pady=(5, 5))
+        # Create label and entry field
+        tk.Label(sheet_window_frame, text=f"{row_name}:").grid(row=row_index, column=column_index, sticky=tk.W, pady=(5, 5))
         
         entry_fields[row_name] = tk.Entry(sheet_window_frame)
-        entry_fields[row_name].grid(row=row_index +1, column=column_index + 1, columnspan=1, sticky=tk.W + tk.E, pady=(5, 5))
-        
-        column_index += 1  # Move to the next column for the next entry
+        entry_fields[row_name].grid(row=row_index, column=column_index + 1, columnspan=1, sticky=tk.W + tk.E, pady=(5, 5))
 
+    # Add DateEntry widget for date selection
+    tk.Label(sheet_window_frame, text="Select Date:").grid(row=start_row + len(row_names), column=0, sticky=tk.W, pady=(5, 5))
+    date_entry = DateEntry(sheet_window_frame, date_pattern="MM/dd/yyyy")
+    date_entry.grid(row=start_row + len(row_names), column=1, sticky=tk.W + tk.E, pady=(5, 5))
 
-        # Ensure the main window updates correctly after adding widgets
-        sheet_window_frame.update_idletasks()
+    # Add a submit button to save data
+    submit_button = tk.Button(sheet_window_frame, text="Submit", command=lambda: save_data(entry_fields, date_entry.get_date()))
+    submit_button.grid(row=start_row + len(row_names) + 1, column=0, columnspan=2, pady=(10, 0))
+
+    # Ensure the main window updates correctly after adding widgets
+    sheet_window_frame.update_idletasks()
+
+def save_data(entry_fields, selected_date):
+    global file_path
+
+    # Read the Excel file
+    try:
+        Data_df = pd.read_excel(file_path, sheet_name='Data')
+    except FileNotFoundError:
+        messagebox.showerror("Error", f"File not found: {file_path}")
+        return
+    except pd.errors.EmptyDataError:
+        messagebox.showerror("Error", f"File is empty: {file_path}")
+        return
+
+    # Start processing from the third column onwards (index 2 onwards)
+    columns_to_format = Data_df.columns[2:]
+
+    # Convert to datetime and format
+    Data_df.columns = pd.to_datetime(columns_to_format, format="%Y-%m-%d").strftime("%d/%m/%Y")
+
+    # Format the selected date
+    formatted_date = selected_date.strftime("%m/%d/%Y")
+
+    # Check if the formatted_date exists in Data_df columns
+    if formatted_date not in Data_df.columns:
+        messagebox.showerror("Error", f"Date {formatted_date} not found in the sheet.")
+        return
+
+    # Append data to the correct column
+    for row_name, entry in entry_fields.items():
+        value = entry.get()
+        if value:  # If there's a value entered
+            Data_df.loc[Data_df.iloc[1:19, 1] == row_name, formatted_date] = value
+
+    # Save the updated DataFrame back to the Excel file
+    with pd.ExcelWriter(file_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+        Data_df.to_excel(writer, sheet_name='Data', index=False)
+
+    messagebox.showinfo("Success", "Data has been appended successfully!")
 
     pass
 
