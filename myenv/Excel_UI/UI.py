@@ -126,7 +126,7 @@ def create_data_window():
         messagebox.showerror("Error", f"File is empty: {file_path}")
         return
 
-    # Assuming row names (labels) are in column B, rows 2 to 18
+    # Assuming row names (labels) are in column B, rows 2 to 18 (1-based indexing, thus 1:17 in 0-based indexing)
     row_names = Data_df_no_header.iloc[1:18, 1].tolist()
 
     print("Date DataFrame:")
@@ -161,46 +161,46 @@ def create_data_window():
     # Ensure the main window updates correctly after adding widgets
     sheet_window_frame.update_idletasks()
 
-    def save_data(entry_fields, selected_date, Data_df_no_header, Data_df_with_header):
-        global file_path
+def save_data(entry_fields, selected_date, Data_df_no_header, Data_df_with_header):
+    global file_path
 
-        # Drop the first row (date headers row)
-        #Data_df = Data_df.drop(0)
-    
-        try:
-            # Format the date
-            formatted_date = selected_date.strftime("%m/%d/%Y")
+    try:
+        # Format the date
+        formatted_date = selected_date.strftime("%m/%d/%Y")
 
-            # Ensure Data_df_with_header only contains relevant data columns (excluding non-date columns)
-            data_columns = Data_df_with_header.columns[2:]  # Assuming the first two columns are non-date columns
+        # Ensure Data_df_with_header only contains relevant data columns (excluding non-date columns)
+        data_columns = Data_df_with_header.columns[2:]  # Assuming the first two columns are non-date columns
 
-            # Format the date columns into the desired format
-            formatted_columns = pd.to_datetime(data_columns, format="%m-%d-%Y").strftime("%m/%d/%Y")
+        # Format the date columns into the desired format
+        formatted_columns = pd.to_datetime(data_columns, format="%m/%d/%Y").strftime("%m/%d/%Y")
 
-            # Check if the selected date exists in formatted columns
-            if formatted_date not in formatted_columns:
-                messagebox.showerror("Error", f"Date {formatted_date} not found in the sheet.")
-                return
+        # Check if the selected date exists in formatted columns
+        if formatted_date not in formatted_columns:
+            messagebox.showerror("Error", f"Date {formatted_date} not found in the sheet.")
+            return
 
-            # Assign formatted columns to Data_df_no_header
-            Data_df_no_header.columns = list(Data_df_with_header.columns[:2]) + list(formatted_columns)
+        # Assign formatted columns to Data_df_no_header
+        Data_df_no_header.columns = list(Data_df_with_header.columns[:2]) + list(formatted_columns)
 
-            # Append data to the correct column
-            for row_name, entry in entry_fields.items():
-                value = entry.get()
-                if value:  # If there's a value entered
-                    # Locate the correct row based on the label in column B
-                    row_index = Data_df_no_header[Data_df_no_header.iloc[:, 1] == row_name].index[0]
-                    Data_df_no_header.loc[row_index, formatted_date] = value
+        # Append data to the correct column
+        for row_name, entry in entry_fields.items():
+            value = entry.get()
+            if value:  # If there's a value entered
+                # Locate the correct row based on the label in column B
+                row_index = Data_df_no_header[Data_df_no_header.iloc[:, 1] == row_name].index[0]
+                Data_df_no_header.loc[row_index, formatted_date] = value
 
-            # Save the updated DataFrame back to the Excel file
-            with pd.ExcelWriter(file_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-                Data_df_no_header.to_excel(writer, sheet_name='Data', index=False, startrow=1)  # Start writing from row 2
+        # Filter the DataFrame to only include rows 2 to 18
+        Data_df_to_save = Data_df_no_header.iloc[1:18]
 
-            messagebox.showinfo("Success", "Data has been appended successfully!")
+        # Save the updated DataFrame back to the Excel file, excluding the first row
+        with pd.ExcelWriter(file_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
+            Data_df_to_save.to_excel(writer, sheet_name='Data', index=False, header=False, startrow=1)  # Start writing from row 2
 
-        except Exception as e:
-            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+        messagebox.showinfo("Success", "Data has been appended successfully!")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {str(e)}")
     
     pass
 
