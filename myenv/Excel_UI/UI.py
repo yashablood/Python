@@ -130,7 +130,7 @@ def create_data_window():
     row_names = Data_df_no_header.iloc[1:18, 1].tolist()
 
     print("Date DataFrame:")
-    print(Data_df_no_header.head())
+    print(Data_df_no_header.iloc[:, 1].tolist())
 
     tk.Label(sheet_window_frame, text="Data Sheet", font=("Arial", 14)).grid(row=0, column=0, columnspan=3, pady=(0, 10))
 
@@ -153,6 +153,22 @@ def create_data_window():
     tk.Label(sheet_window_frame, text="Select Date:").grid(row=start_row + len(row_names), column=0, sticky=tk.W, pady=(5, 5))
     date_entry = DateEntry(sheet_window_frame, date_pattern="MM/dd/yyyy")
     date_entry.grid(row=start_row + len(row_names), column=1, sticky=tk.W + tk.E, pady=(5, 5))
+
+    #Updating the Truck Fill %
+    truck_fill_row = Data_df_no_header[Data_df_no_header.iloc[:, 1] == "Truck Fill %"].index[0]
+
+
+    
+
+    #Testing if the percentage is working on column 172
+    column_index = 171  # 172nd column (0-based index)
+    if column_index < len(Data_df_no_header.columns):
+        # Access column by index and print its contents
+        print(f"The contents of column index {column_index} are:")
+        print(Data_df_no_header.iloc[:, column_index])
+    else:
+        print(f"Column index {column_index} is out of range. The DataFrame has only {len(Data_df_no_header.columns)} columns.")
+
 
     # Add a submit button to save data
     submit_button = tk.Button(sheet_window_frame, text="Submit", command=lambda: save_data(entry_fields, date_entry.get_date(), Data_df_no_header, Data_df_with_header))
