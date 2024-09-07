@@ -187,6 +187,23 @@ def save_data(entry_fields, selected_date, Data_df_no_header, Data_df_with_heade
         # Format the date columns into the desired format
         formatted_columns = pd.to_datetime(data_columns, format="%m/%d/%Y").strftime("%m/%d/%Y")
 
+        # Check if the selected date exists in formatted columns
+        if formatted_date not in formatted_columns:
+            messagebox.showerror("Error", f"Date {formatted_date} not found in the sheet.")
+            return
+            
+        # Assign formatted columns to Data_df_no_header
+        Data_df_no_header.columns = list(Data_df_with_header.columns[:2]) + list(formatted_columns)
+
+        # Append data to the correct column
+        for row_name, entry in entry_fields.items():
+            value = entry.get()
+            if value:  # If there's a value entered
+                # Locate the correct row based on the label in column B
+                row_index = Data_df_no_header[Data_df_no_header.iloc[:, 1] == row_name].index[0]
+                Data_df_no_header.loc[row_index, formatted_date] = value
+
+
                # Process Truck Fill %
         for row_name, entry in entry_fields.items():
             value = entry.get()
@@ -204,21 +221,6 @@ def save_data(entry_fields, selected_date, Data_df_no_header, Data_df_with_heade
                 # Handle other fields if necessary
                 pass
 
-        # Check if the selected date exists in formatted columns
-        if formatted_date not in formatted_columns:
-            messagebox.showerror("Error", f"Date {formatted_date} not found in the sheet.")
-            return
-            
-        # Assign formatted columns to Data_df_no_header
-        Data_df_no_header.columns = list(Data_df_with_header.columns[:2]) + list(formatted_columns)
-
-        # Append data to the correct column
-        for row_name, entry in entry_fields.items():
-            value = entry.get()
-            if value:  # If there's a value entered
-                # Locate the correct row based on the label in column B
-                row_index = Data_df_no_header[Data_df_no_header.iloc[:, 1] == row_name].index[0]
-                Data_df_no_header.loc[row_index, formatted_date] = value
 
         # Filter the DataFrame to only include rows 2 to 18
         Data_df_to_save = Data_df_no_header.iloc[1:18]
