@@ -157,9 +157,6 @@ def create_data_window():
     #Updating the Truck Fill %
     truck_fill_row = Data_df_no_header[Data_df_no_header.iloc[:, 1] == "Truck Fill %"].index[0]
 
-
-    
-
     #Testing if the percentage is working on column 172
     column_index = 171  # 172nd column (0-based index)
     if column_index < len(Data_df_no_header.columns):
@@ -190,11 +187,28 @@ def save_data(entry_fields, selected_date, Data_df_no_header, Data_df_with_heade
         # Format the date columns into the desired format
         formatted_columns = pd.to_datetime(data_columns, format="%m/%d/%Y").strftime("%m/%d/%Y")
 
+               # Process Truck Fill %
+        for row_name, entry in entry_fields.items():
+            value = entry.get()
+            if row_name == "Truck Fill %" and value.isdigit():
+                fill_value = min(int(value), 26)  # Cap the value at 26
+                percentage = (fill_value / 26) * 100
+
+                # Find the index of "Truck Fill %" in column B
+                truck_fill_row = Data_df_no_header[Data_df_no_header.iloc[:, 1] == "Truck Fill %"].index[0]
+
+                # Update the truck fill percentage in the appropriate column
+                Data_df_no_header.loc[truck_fill_row, formatted_date] = percentage
+
+            else:
+                # Handle other fields if necessary
+                pass
+
         # Check if the selected date exists in formatted columns
         if formatted_date not in formatted_columns:
             messagebox.showerror("Error", f"Date {formatted_date} not found in the sheet.")
             return
-
+            
         # Assign formatted columns to Data_df_no_header
         Data_df_no_header.columns = list(Data_df_with_header.columns[:2]) + list(formatted_columns)
 
