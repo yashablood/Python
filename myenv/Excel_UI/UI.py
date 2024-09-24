@@ -461,12 +461,34 @@ sheet_name_combobox = ttk.Combobox(frame, state="readonly")
 sheet_name_combobox.pack()
 sheet_name_combobox.bind("<<ComboboxSelected>>", update_sheet_window)
 
-# Frame for sheet-specific widgets
-sheet_window_frame = tk.Frame(root)
-sheet_window_frame.pack(padx=10, pady=10)
+# Frame for the canvas and scrollbar
+canvas_frame = tk.Frame(root)
+canvas_frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
 
-# Frame for dynamic entries
-dynamic_frame = tk.Frame(root)
+# Create the Canvas and Scrollbar
+canvas = tk.Canvas(canvas_frame)
+scrollbar = tk.Scrollbar(canvas_frame, orient=tk.VERTICAL, command=canvas.yview)
+canvas.configure(yscrollcommand=scrollbar.set)
+
+# Pack the Scrollbar and Canvas
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+# Create a frame inside the canvas to hold the sheet window
+sheet_window_frame = tk.Frame(canvas)
+
+# Add the frame to the canvas
+canvas.create_window((0, 0), window=sheet_window_frame, anchor="center")
+
+# Configure the canvas scroll region when widgets are added
+def update_canvas(event=None):
+    canvas.configure(scrollregion=canvas.bbox("all"))
+
+# Bind the update_canvas function to execute when widgets are added or resized
+sheet_window_frame.bind("<Configure>", update_canvas)
+
+# Frame for dynamic entries INSIDE the sheet_window_frame for scrolling support
+dynamic_frame = tk.Frame(sheet_window_frame)
 dynamic_frame.pack(padx=10, pady=10)
 
 # Add a text widget for showing results
