@@ -436,6 +436,24 @@ def append_data(file_path, sheet_name, data):
     except Exception as e:
         return f"An error occurred: {e}"
 
+# Function to update the canvas scroll region and center content
+def update_canvas(event=None):
+    # Update the scroll region of the canvas
+    canvas.configure(scrollregion=canvas.bbox("all"))
+    
+    # Get the width of the canvas and the width of the content
+    canvas_width = canvas.winfo_width()
+    content_width = sheet_window_frame.winfo_reqwidth()
+    
+    # Calculate the x offset to center the content
+    if content_width < canvas_width:
+        x_offset = (canvas_width - content_width) // 2
+    else:
+        x_offset = 0
+
+    # Move the content to be centered
+    canvas.itemconfig(window, x=x_offset)
+
 
 # Create the main window
 root = tk.Tk()
@@ -459,7 +477,6 @@ entry_frame.pack(padx=10, pady=10)
 tk.Label(frame, text="Sheet Name:").pack()
 sheet_name_combobox = ttk.Combobox(frame, state="readonly")
 sheet_name_combobox.pack()
-sheet_name_combobox.bind("<<ComboboxSelected>>", update_sheet_window)
 
 # Frame for the canvas and scrollbar
 canvas_frame = tk.Frame(root)
@@ -474,21 +491,22 @@ canvas.configure(yscrollcommand=scrollbar.set)
 scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-# Create a frame inside the canvas to hold the sheet window
-sheet_window_frame = tk.Frame(canvas)
+# Create a frame inside the canvas to hold the content
+sheet_window_frame = tk.Frame(canvas, width=300, height=200)
 
-# Add the frame to the canvas
-canvas.create_window((0, 0), window=sheet_window_frame, anchor="center")
+# Add the frame to the canvas and store the window object globally
+window = canvas.create_window(0, 0, window=sheet_window_frame, anchor="center")
 
-# Configure the canvas scroll region when widgets are added
+# Bind the update_canvas function to resizing events
+sheet_window_frame.bind("<Configure>", update_canvas)
+canvas.bind("<Configure>", update_canvas)
+
+# Configure the canvas scroll region
 def update_canvas(event=None):
     canvas.configure(scrollregion=canvas.bbox("all"))
 
-# Bind the update_canvas function to execute when widgets are added or resized
-sheet_window_frame.bind("<Configure>", update_canvas)
-
-# Frame for dynamic entries INSIDE the sheet_window_frame for scrolling support
-dynamic_frame = tk.Frame(sheet_window_frame)
+# Frame for sheet-specific widgets (dynamic frame)
+dynamic_frame = tk.Frame(root)
 dynamic_frame.pack(padx=10, pady=10)
 
 # Add a text widget for showing results
