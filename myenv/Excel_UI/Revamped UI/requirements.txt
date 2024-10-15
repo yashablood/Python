@@ -1,4 +1,0 @@
-Required Python Libraries
-Pandas
-Openpyxl
-Tkinter

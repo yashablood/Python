@@ -7,6 +7,7 @@ def select_file():
     root = tk.Tk()
     root.withdraw()  # Hide the main window
 
+    print("Select a file")
     # Open the file dialog and get the selected file path
     file_path = filedialog.askopenfilename(
         title="Select an Excel file",
@@ -22,16 +23,18 @@ def select_file():
         return None
 
 def main():
+    print("Select a file 2")
     # Call the file selection function
     file_path = select_file()  # Get the file path
     if file_path:  # Proceed only if a file was selected
+        
         # Define the sheet name and data you want to update
         sheet_name = "Data"  # Change this as needed
         data = {'Truck Fill %': 90, 'Days without Incident': 5}  # Example data
-        date = "2024-10-10"  # Example date
+        date = "10/10/2024"  # Example date
 
         # Update the sheet with the selected file
-        ui_controller.update_sheet(sheet_name, file_path, data, date)
+        #ui_controller.update_sheet(sheet_name, file_path)
 
         # Example for Recognitions
         # recognition_data = {'Employee Name': 'John Doe', 'Recognition': 'Great job!'}

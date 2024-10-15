@@ -1,45 +1,33 @@
-import pandas as pd
 from openpyxl import load_workbook
+from datetime import datetime
 
-def update_data_sheet(file_path, new_data, date):
-    # Load workbook and select the 'Data' sheet
+def update_data_sheet(file_path, data, date_str):
+    print("Selected Data sheet")
+    # Load the workbook and select the "Data" sheet
     wb = load_workbook(file_path)
-    ws = wb['Data']
-    
-    # Check for the correct date column
-    date_col = None
-    for cell in ws[1]:
-        if cell.value == date:
-            date_col = cell.column
+    sheet = wb['Data']
 
-    if not date_col:
-        raise ValueError(f"Date {date} not found in Data sheet.")
+    for col in range(3, sheet.max_column + 1):
+        cell_value = sheet.cell(row=1, column=col).value
+        print(f"Column {col}: {cell_value}")  # Debugging print
 
-    # Write new data to the appropriate rows
-    row_mapping = {
-        'Days without Incident': 2,
-        'Haz ID\'s': 3,
-        'Safety Gemba Walk': 4,
-        '7S (Zone 26)': 5,
-        '7S (Zone 51)': 6,
-        'Errors': 7,
-        'PCD Returns': 8,
-        'Jobs on Hold': 9,
-        'Productivity': 10,
-        'OTIF %': 11,
-        'Huddles': 12,
-        'Truck Fill %': 13,
-        'Recognitions': 14,
-        'MC Compliance': 15,
-        'Cost Savings': 16,
-        'Rever\'s': 17,
-        'Project\'s': 18
-    }
+    # Convert the input date string to a datetime object
+    selected_date = datetime.strptime(date_str, "%m/%d/%Y")
 
-    for key, value in new_data.items():
-        if key in row_mapping:
-            ws.cell(row=row_mapping[key], column=date_col, value=value)
-    
-    # Save workbook after updating
+    # Search for the date in row 1 (from C1 onwards)
+    for col in range(3, sheet.max_column + 1):  # Starts at column C (index 3)
+        cell_value = sheet.cell(row=1, column=col).value
+
+        # Check if the cell value matches the selected date (in date format)
+        if isinstance(cell_value, datetime) and cell_value.date() == selected_date.date():
+            print(f"Found date {selected_date.strftime('%m/%d/%Y')} in column {col}")
+            
+            # Now, update the data in the corresponding column
+            for row, (key, value) in enumerate(data.items(), start=2):
+                sheet.cell(row=row, column=col).value = value
+            break
+    else:
+        raise ValueError(f"Date {date_str} not found in Data sheet.")
+
+    # Save the workbook after updating
     wb.save(file_path)
-    print(f"Data sheet updated for date {date}")
