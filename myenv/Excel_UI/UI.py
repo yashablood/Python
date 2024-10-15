@@ -154,22 +154,6 @@ def create_data_window():
     date_entry = DateEntry(sheet_window_frame, date_pattern="MM/dd/yyyy")
     date_entry.grid(row=start_row + len(row_names), column=1, sticky=tk.W + tk.E, pady=(5, 5))
 
-    #Updating the Truck Fill %
-    truck_fill_row = Data_df_no_header[Data_df_no_header.iloc[:, 1] == "Truck Fill %"].index[0]
-
-
-    
-
-    #Testing if the percentage is working on column 172
-    column_index = 171  # 172nd column (0-based index)
-    if column_index < len(Data_df_no_header.columns):
-        # Access column by index and print its contents
-        print(f"The contents of column index {column_index} are:")
-        print(Data_df_no_header.iloc[:, column_index])
-    else:
-        print(f"Column index {column_index} is out of range. The DataFrame has only {len(Data_df_no_header.columns)} columns.")
-
-
     # Add a submit button to save data
     submit_button = tk.Button(sheet_window_frame, text="Submit", command=lambda: save_data(entry_fields, date_entry.get_date(), Data_df_no_header, Data_df_with_header))
     submit_button.grid(row=start_row + len(row_names) + 1, column=0, columnspan=2, pady=(10, 0))
@@ -194,7 +178,7 @@ def save_data(entry_fields, selected_date, Data_df_no_header, Data_df_with_heade
         if formatted_date not in formatted_columns:
             messagebox.showerror("Error", f"Date {formatted_date} not found in the sheet.")
             return
-
+            
         # Assign formatted columns to Data_df_no_header
         Data_df_no_header.columns = list(Data_df_with_header.columns[:2]) + list(formatted_columns)
 
@@ -205,6 +189,24 @@ def save_data(entry_fields, selected_date, Data_df_no_header, Data_df_with_heade
                 # Locate the correct row based on the label in column B
                 row_index = Data_df_no_header[Data_df_no_header.iloc[:, 1] == row_name].index[0]
                 Data_df_no_header.loc[row_index, formatted_date] = value
+
+
+            # Check if we're updating "Truck Fill %" and the value is a valid number
+            if row_name == "Truck Fill %" and value.isdigit():
+                fill_value = min(int(value), 26)  # Cap the value at 26
+                percentage = (fill_value / 26)
+                
+                # Find the index of "Truck Fill %" in column B
+                truck_fill_row = Data_df_no_header[Data_df_no_header.iloc[:, 1].str.strip() == "Truck Fill %"].index[0]
+
+                # Update the truck fill percentage in the appropriate column
+                Data_df_no_header.loc[truck_fill_row, formatted_date] = percentage
+
+            elif value:  # If there's a value entered for other rows
+                # Locate the correct row based on the label in column B
+                row_index = Data_df_no_header[Data_df_no_header.iloc[:, 1].str.strip() == row_name].index[0]
+                Data_df_no_header.loc[row_index, formatted_date] = value
+
 
         # Filter the DataFrame to only include rows 2 to 18
         Data_df_to_save = Data_df_no_header.iloc[1:18]
