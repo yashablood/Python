@@ -1,60 +1,69 @@
 import tkinter as tk
 from tkinter import filedialog
 
-# Function to open a file dialog and select an Excel file
-def select_file():
-    file_path = filedialog.askopenfilename(title="Select Excel file", filetypes=[("Excel files", "*.xlsx")])
+def open_file():
+    file_path = filedialog.askopenfilename(title="Select Excel File", filetypes=[("Excel files", "*.xlsx")])
     if file_path:
-        file_label.config(text=f"Selected File: {file_path}")
-    else:
-        file_label.config(text="No file selected")
+        print(f"Selected file: {file_path}")
 
-# Function to handle submission (for now, this just prints data)
 def submit_data():
-    print("Submit button pressed")
+    print("Submit button clicked")
 
-# Setting up the main window
+# Initialize the main window
 root = tk.Tk()
-root.title("Excel Data Manipulation")
-root.geometry("400x300")
+root.title("Data Entry UI")
+root.geometry("400x400")  # Set the window size
 
-# Top frame for the file selection button
-top_frame = tk.Frame(root)
-top_frame.pack(pady=10)
+# Create a frame to hold all widgets
+main_frame = tk.Frame(root)
+main_frame.pack(fill="both", expand=True)
 
-file_button = tk.Button(top_frame, text="Select Excel File", command=select_file)
-file_button.pack()
+# Create a Canvas and a Scrollbar
+canvas = tk.Canvas(main_frame)
+scrollbar = tk.Scrollbar(main_frame, orient="vertical", command=canvas.yview)
+scrollable_frame = tk.Frame(canvas)
 
-file_label = tk.Label(top_frame, text="No file selected")
-file_label.pack()
+# Configure the scrollable frame
+scrollable_frame.bind(
+    "<Configure>",
+    lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+)
 
-# Middle frame for the entry fields and labels
-middle_frame = tk.Frame(root)
-middle_frame.pack(pady=20)
+canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+canvas.configure(yscrollcommand=scrollbar.set)
 
-# Labels on the left, Entry fields on the right (adjust as needed for number of fields)
-labels = ["Days without Incident", "Haz ID's", "Safety Gemba Walk", "7S (Zone 26)", "7S (Zone 51)", "Errors", "PCD Returns",
-        "Jobs on Hold", "Productivity", "OTIF %", "Huddles", "Truck Fill %", "Recognitions", "MC Compliance",
-        "Cost Savings", "Rever's", "Project's", "Days Without Incident", "Haz ID's", "Safety Gemba Walk", "7S (Zone 26)", "7S (Zone 51)", "Errors", "PCD Returns", "Jobs on hold", "Productivity", "Otif", "Huddles", "Truck Fill", "Recognitions", "Master Control Compliance", "Cost Savings", " Rever's", "Projects"]  # Adjust based on the fields you want
-entries = []
+# Add the scrollbar to the right side of the main frame
+canvas.pack(side="left", fill="both", expand=True)
+scrollbar.pack(side="right", fill="y")
 
-for label_text in labels:
-    row_frame = tk.Frame(middle_frame)
-    row_frame.pack(fill='x', pady=5)
+# Button to select Excel file
+file_button = tk.Button(scrollable_frame, text="Select Excel File", command=open_file)
+file_button.grid(row=0, column=0, columnspan=2, pady=(0, 20))
 
-    label = tk.Label(row_frame, text=label_text, width=15, anchor='w')
-    label.pack(side='left')
+# Labels and Entry fields for data input
+labels = [
+    "Days without Incident", "Haz ID's", "Safety Gemba Walk", "7S (Zone 26)", "7S (Zone 51)", "Errors", "PCD Returns",
+    "Jobs on Hold", "Productivity", "OTIF %", "Huddles", "Truck Fill %", "Recognitions", "MC Compliance",
+    "Cost Savings", "Rever's", "Project's"
+]
 
-    entry = tk.Entry(row_frame)
-    entry.pack(side='right', fill='x', expand=True)
-    entries.append(entry)
+entry_fields = []
 
-# Bottom frame for the submit button
-bottom_frame = tk.Frame(root)
-bottom_frame.pack(pady=20)
+for i, label in enumerate(labels):
+    tk.Label(scrollable_frame, text=label).grid(row=i+1, column=0, sticky="e", padx=5, pady=5)
+    entry = tk.Entry(scrollable_frame)
+    entry.grid(row=i+1, column=1, padx=5, pady=5)
+    entry_fields.append(entry)
 
-submit_button = tk.Button(bottom_frame, text="Submit", command=submit_data)
-submit_button.pack()
+# Submit button at the bottom
+submit_button = tk.Button(scrollable_frame, text="Submit", command=submit_data)
+submit_button.grid(row=len(labels) + 1, column=0, columnspan=2, pady=20)
 
-# Start the Tkinter event loop
+# Enable scrolling with the mouse wheel
+def on_mouse_wheel(event):
+    canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+canvas.bind_all("<MouseWheel>", on_mouse_wheel)
+
+# Run the application
 root.mainloop()
