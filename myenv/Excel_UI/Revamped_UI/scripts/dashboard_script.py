@@ -1,5 +1,9 @@
 from openpyxl import load_workbook
 
+def load_data(file_path):
+    # Load data from the specified Excel file
+    pass
+
 def append_dashboard(file_path, dashboard_data):
     wb = load_workbook(file_path)
     ws = wb['Dashboard']

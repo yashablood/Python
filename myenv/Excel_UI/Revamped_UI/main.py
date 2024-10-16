@@ -1,13 +1,52 @@
 import tkinter as tk
 from tkinter import filedialog
+from tkcalendar import DateEntry
+import importlib  # For dynamic importing of modules
+from scripts import dashboard_script, data_script, error_tracker_script, otif_script, production_script, recognitions_script
 
 def open_file():
+    global file_path
     file_path = filedialog.askopenfilename(title="Select Excel File", filetypes=[("Excel files", "*.xlsx")])
     if file_path:
         print(f"Selected file: {file_path}")
+        load_scripts()  # Load scripts after file selection
+
+def load_scripts():
+    # You can initialize or load data here from the scripts if necessary
+    dashboard_script.load_data(file_path)
+    print("Dashboard script loaded")
+
+    data_script.load_data(file_path)
+    print("Data script loaded")
+
+    error_tracker_script.load_data(file_path)
+    print("Error Tracker script loaded")
+
+    otif_script.load_data(file_path)
+    print("OTIF script loaded")
+
+    production_script.load_data(file_path)
+    print("Production script loaded")
+
+    recognitions_script.load_data(file_path)
+    print("Recognitions script loaded")
+
 
 def submit_data():
     print("Submit button clicked")
+
+    # Collect data from the entry fields
+    data = {}
+    for i, entry in enumerate(entry_fields):
+        label = labels[i]
+        data[label] = entry.get()  # Store the input data
+
+    # Call update functions from each loaded module
+    for module in sheet_modules:
+        try:
+            module.update_sheet(file_path, data)  # Call the update function for each module
+        except AttributeError:
+            print(f"No update function in {module.__name__}")    
 
 # Initialize the main window
 root = tk.Tk()
@@ -40,6 +79,12 @@ scrollbar.pack(side="right", fill="y")
 file_button = tk.Button(scrollable_frame, text="Select Excel File", command=open_file)
 file_button.grid(row=0, column=0, columnspan=2, pady=(0, 20))
 
+# Calendar for date selection
+date_label = tk.Label(scrollable_frame, text="Select Date:")
+date_label.grid(row=1, column=0, sticky="e", padx=5, pady=5)
+date_entry = DateEntry(scrollable_frame, width=12, background='darkblue', foreground='white', borderwidth=2)
+date_entry.grid(row=1, column=1, padx=5, pady=5)
+
 # Labels and Entry fields for data input
 labels = [
     "Days without Incident", "Haz ID's", "Safety Gemba Walk", "7S (Zone 26)", "7S (Zone 51)", "Errors", "PCD Returns",
@@ -49,15 +94,16 @@ labels = [
 
 entry_fields = []
 
+# Start adding labels and entry fields from row 2
 for i, label in enumerate(labels):
-    tk.Label(scrollable_frame, text=label).grid(row=i+1, column=0, sticky="e", padx=5, pady=5)
+    tk.Label(scrollable_frame, text=label).grid(row=i+2, column=0, sticky="e", padx=5, pady=5)  # Adjust row index
     entry = tk.Entry(scrollable_frame)
-    entry.grid(row=i+1, column=1, padx=5, pady=5)
+    entry.grid(row=i+2, column=1, padx=5, pady=5)  # Adjust row index
     entry_fields.append(entry)
 
 # Submit button at the bottom
 submit_button = tk.Button(scrollable_frame, text="Submit", command=submit_data)
-submit_button.grid(row=len(labels) + 1, column=0, columnspan=2, pady=20)
+submit_button.grid(row=len(labels) + 2, column=0, columnspan=2, pady=20)
 
 # Enable scrolling with the mouse wheel
 def on_mouse_wheel(event):

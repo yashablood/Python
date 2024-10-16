@@ -1,6 +1,10 @@
 from openpyxl import load_workbook
 from datetime import datetime
 
+def load_data(file_path):
+    # Load data from the specified Excel file
+    pass
+
 def update_data_sheet(file_path, data, date_str):
     print("Selected Data sheet")
     # Load the workbook and select the "Data" sheet
