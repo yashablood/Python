@@ -3,18 +3,11 @@ from tkinter import filedialog
 import ui_controller
 
 def select_file():
-    # Create a new Tkinter window
-    root = tk.Tk()
-    root.withdraw()  # Hide the main window
-
-    print("Select a file")
-    # Open the file dialog and get the selected file path
+    # Open a file dialog to select the Excel file
     file_path = filedialog.askopenfilename(
         title="Select an Excel file",
         filetypes=[("Excel Files", "*.xlsx;*.xls")]
     )
-
-    # Print or return the file path
     if file_path:
         print(f"Selected file: {file_path}")
         return file_path
@@ -22,31 +15,47 @@ def select_file():
         print("No file selected")
         return None
 
-def main():
-    print("Select a file 2")
-    # Call the file selection function
-    file_path = select_file()  # Get the file path
-    if file_path:  # Proceed only if a file was selected
+def update_data():
+    # Get the entered data from the UI
+    truck_fill = entry_truck_fill.get()
+    days_without_incident = entry_days_without_incident.get()
+    date = entry_date.get()
+
+    # Select the Excel file to update
+    file_path = select_file()
+
+    if file_path:
+        # Create the data dictionary to pass to the update function
+        data = {'Truck Fill %': truck_fill, 'Days without Incident': days_without_incident}
         
-        # Define the sheet name and data you want to update
-        sheet_name = "Data"  # Change this as needed
-        data = {'Truck Fill %': 90, 'Days without Incident': 5}  # Example data
-        date = "10/10/2024"  # Example date
+        # Update the sheet using the data entered in the UI
+        ui_controller.update_sheet('Data', file_path, data, date)
 
-        # Update the sheet with the selected file
-        #ui_controller.update_sheet(sheet_name, file_path)
+def create_ui():
+    root = tk.Tk()
+    root.title("Excel Sheet Updater")
 
-        # Example for Recognitions
-        # recognition_data = {'Employee Name': 'John Doe', 'Recognition': 'Great job!'}
-        # ui_controller.update_sheet('Recognitions', file_path, recognition_data)
+    # Labels and entry fields
+    tk.Label(root, text="Truck Fill %:").grid(row=0, column=0, padx=10, pady=5)
+    global entry_truck_fill
+    entry_truck_fill = tk.Entry(root)
+    entry_truck_fill.grid(row=0, column=1, padx=10, pady=5)
 
-        # Example for Error Tracker
-        # error_data = {'Error Description': 'Sample error', 'Resolved': 'Yes'}
-        # ui_controller.update_sheet('Error Tracker', file_path, error_data)
+    tk.Label(root, text="Days without Incident:").grid(row=1, column=0, padx=10, pady=5)
+    global entry_days_without_incident
+    entry_days_without_incident = tk.Entry(root)
+    entry_days_without_incident.grid(row=1, column=1, padx=10, pady=5)
 
-        # You can keep the lines for Production and OTIF as placeholders or remove them
-        # ui_controller.update_sheet('Production', file_path, {'Data': 'Not implemented'})
-        # ui_controller.update_sheet('OTIF', file_path, {'Data': 'Not implemented'})
+    tk.Label(root, text="Date (MM/DD/YYYY):").grid(row=2, column=0, padx=10, pady=5)
+    global entry_date
+    entry_date = tk.Entry(root)
+    entry_date.grid(row=2, column=1, padx=10, pady=5)
+
+    # Submit button
+    update_button = tk.Button(root, text="Update Excel Sheet", command=update_data)
+    update_button.grid(row=3, column=0, columnspan=2, pady=10)
+
+    root.mainloop()
 
 if __name__ == "__main__":
-    main()  # Call the main function to run the program
+    create_ui()
