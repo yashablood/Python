@@ -1,61 +1,58 @@
 import tkinter as tk
 from tkinter import filedialog
-import ui_controller
 
+# Function to open a file dialog and select an Excel file
 def select_file():
-    # Open a file dialog to select the Excel file
-    file_path = filedialog.askopenfilename(
-        title="Select an Excel file",
-        filetypes=[("Excel Files", "*.xlsx;*.xls")]
-    )
+    file_path = filedialog.askopenfilename(title="Select Excel file", filetypes=[("Excel files", "*.xlsx")])
     if file_path:
-        print(f"Selected file: {file_path}")
-        return file_path
+        file_label.config(text=f"Selected File: {file_path}")
     else:
-        print("No file selected")
-        return None
+        file_label.config(text="No file selected")
 
-def update_data():
-    # Get the entered data from the UI
-    truck_fill = entry_truck_fill.get()
-    days_without_incident = entry_days_without_incident.get()
-    date = entry_date.get()
+# Function to handle submission (for now, this just prints data)
+def submit_data():
+    print("Submit button pressed")
 
-    # Select the Excel file to update
-    file_path = select_file()
+# Setting up the main window
+root = tk.Tk()
+root.title("Excel Data Manipulation")
+root.geometry("400x300")
 
-    if file_path:
-        # Create the data dictionary to pass to the update function
-        data = {'Truck Fill %': truck_fill, 'Days without Incident': days_without_incident}
-        
-        # Update the sheet using the data entered in the UI
-        ui_controller.update_sheet('Data', file_path, data, date)
+# Top frame for the file selection button
+top_frame = tk.Frame(root)
+top_frame.pack(pady=10)
 
-def create_ui():
-    root = tk.Tk()
-    root.title("Excel Sheet Updater")
+file_button = tk.Button(top_frame, text="Select Excel File", command=select_file)
+file_button.pack()
 
-    # Labels and entry fields
-    tk.Label(root, text="Truck Fill %:").grid(row=0, column=0, padx=10, pady=5)
-    global entry_truck_fill
-    entry_truck_fill = tk.Entry(root)
-    entry_truck_fill.grid(row=0, column=1, padx=10, pady=5)
+file_label = tk.Label(top_frame, text="No file selected")
+file_label.pack()
 
-    tk.Label(root, text="Days without Incident:").grid(row=1, column=0, padx=10, pady=5)
-    global entry_days_without_incident
-    entry_days_without_incident = tk.Entry(root)
-    entry_days_without_incident.grid(row=1, column=1, padx=10, pady=5)
+# Middle frame for the entry fields and labels
+middle_frame = tk.Frame(root)
+middle_frame.pack(pady=20)
 
-    tk.Label(root, text="Date (MM/DD/YYYY):").grid(row=2, column=0, padx=10, pady=5)
-    global entry_date
-    entry_date = tk.Entry(root)
-    entry_date.grid(row=2, column=1, padx=10, pady=5)
+# Labels on the left, Entry fields on the right (adjust as needed for number of fields)
+labels = ["Field 1", "Field 2", "Field 3"]  # Adjust based on the fields you want
+entries = []
 
-    # Submit button
-    update_button = tk.Button(root, text="Update Excel Sheet", command=update_data)
-    update_button.grid(row=3, column=0, columnspan=2, pady=10)
+for label_text in labels:
+    row_frame = tk.Frame(middle_frame)
+    row_frame.pack(fill='x', pady=5)
 
-    root.mainloop()
+    label = tk.Label(row_frame, text=label_text, width=15, anchor='w')
+    label.pack(side='left')
 
-if __name__ == "__main__":
-    create_ui()
+    entry = tk.Entry(row_frame)
+    entry.pack(side='right', fill='x', expand=True)
+    entries.append(entry)
+
+# Bottom frame for the submit button
+bottom_frame = tk.Frame(root)
+bottom_frame.pack(pady=20)
+
+submit_button = tk.Button(bottom_frame, text="Submit", command=submit_data)
+submit_button.pack()
+
+# Start the Tkinter event loop
+root.mainloop()

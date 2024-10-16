@@ -27,12 +27,3 @@ def update_sheet(sheet_name, file_path, data, date=None):
     else:
         print(f"No handling defined for {sheet_name}.")
 
-
-# Example call
-#if __name__ == "__main__":
-    # This is an example of calling the function based on user input.
-    #file_path = "path_to_your_file.xlsx"
-    #data = {'Truck Fill %': 90}  # Example data
-    #date = '2024-10-10'
-
-    #update_sheet('Data', file_path, data, date)
