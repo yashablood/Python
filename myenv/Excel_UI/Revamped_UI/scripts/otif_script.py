@@ -1,5 +1,6 @@
 def load_data(file_path):
     # Load data from the specified Excel file
+    print("OTIF script loaded")
     pass
 
 def handle_otif(file_path, data):

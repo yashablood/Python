@@ -2,6 +2,7 @@ from openpyxl import load_workbook
 
 def load_data(file_path):
     # Load data from the specified Excel file
+    print("Recognitions script loaded")
     pass
 
 def append_recognitions(file_path, recognition_data):

@@ -14,23 +14,11 @@ def open_file():
 def load_scripts():
     # You can initialize or load data here from the scripts if necessary
     dashboard_script.load_data(file_path)
-    print("Dashboard script loaded")
-
     data_script.load_data(file_path)
-    print("Data script loaded")
-
     error_tracker_script.load_data(file_path)
-    print("Error Tracker script loaded")
-
     otif_script.load_data(file_path)
-    print("OTIF script loaded")
-
     production_script.load_data(file_path)
-    print("Production script loaded")
-
     recognitions_script.load_data(file_path)
-    print("Recognitions script loaded")
-
 
 def submit_data():
     print("Submit button clicked")

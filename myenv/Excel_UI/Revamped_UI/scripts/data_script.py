@@ -3,6 +3,7 @@ from datetime import datetime
 
 def load_data(file_path):
     # Load data from the specified Excel file
+    print("Data script loaded")
     pass
 
 def update_data_sheet(file_path, data, date_str):

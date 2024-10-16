@@ -2,6 +2,7 @@ from openpyxl import load_workbook
 
 def load_data(file_path):
     # Load data from the specified Excel file
+    print("Error Tracker script loaded")
     pass
 
 def append_error_tracker(file_path, error_tracker_data):

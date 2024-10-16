@@ -2,6 +2,7 @@ from openpyxl import load_workbook
 
 def load_data(file_path):
     # Load data from the specified Excel file
+    print("Dashboard script loaded")
     pass
 
 def append_dashboard(file_path, dashboard_data):
