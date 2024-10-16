@@ -2,7 +2,24 @@ import tkinter as tk
 from tkinter import filedialog
 from tkcalendar import DateEntry
 import importlib  # For dynamic importing of modules
-from scripts import dashboard_script, data_script, error_tracker_script, otif_script, production_script, recognitions_script
+from scripts import (
+    dashboard_script, 
+    data_script, 
+    error_tracker_script, 
+    otif_script, 
+    production_script, 
+    recognitions_script
+    )
+
+# Define sheet_modules to store the imported script modules
+sheet_modules = [
+    dashboard_script,
+    data_script,
+    error_tracker_script,
+    otif_script,
+    production_script,
+    recognitions_script,
+]
 
 def open_file():
     global file_path
