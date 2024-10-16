@@ -33,7 +33,9 @@ middle_frame = tk.Frame(root)
 middle_frame.pack(pady=20)
 
 # Labels on the left, Entry fields on the right (adjust as needed for number of fields)
-labels = ["Field 1", "Field 2", "Field 3"]  # Adjust based on the fields you want
+labels = ["Days without Incident", "Haz ID's", "Safety Gemba Walk", "7S (Zone 26)", "7S (Zone 51)", "Errors", "PCD Returns",
+        "Jobs on Hold", "Productivity", "OTIF %", "Huddles", "Truck Fill %", "Recognitions", "MC Compliance",
+        "Cost Savings", "Rever's", "Project's", "Days Without Incident", "Haz ID's", "Safety Gemba Walk", "7S (Zone 26)", "7S (Zone 51)", "Errors", "PCD Returns", "Jobs on hold", "Productivity", "Otif", "Huddles", "Truck Fill", "Recognitions", "Master Control Compliance", "Cost Savings", " Rever's", "Projects"]  # Adjust based on the fields you want
 entries = []
 
 for label_text in labels:
