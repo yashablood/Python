@@ -29,12 +29,14 @@ def open_file():
 
 def load_scripts():
     # You can initialize or load data here from the scripts if necessary
-    dashboard_script.load_data(file_path)
-    data_script.load_data(file_path)
-    error_tracker_script.load_data(file_path)
-    otif_script.load_data(file_path)
-    production_script.load_data(file_path)
-    recognitions_script.load_data(file_path)
+    for module in sheet_modules:
+        try:
+            module.load_data(file_path)
+            print(f"{module.__name__} loaded data successfully.")
+        except AttributeError:
+            print(f"{module.__name__} does not have a load_data function.")
+        except Exception as e:
+            print(f"Error loading {module.__name__}: {e}")
 
 def submit_data():
     print("Submit button clicked")
@@ -49,8 +51,12 @@ def submit_data():
     for module in sheet_modules:
         try:
             module.update_sheet(file_path, data)  # Call the update function for each module
+            print(f"Updated sheet in {module.__name__}")
         except AttributeError:
-            print(f"No update function in {module.__name__}")    
+            print(f"No update function in {module.__name__}")
+        except Exception as e:
+            print(f"Error updating {module.__name__}: {e}")
+
 
 # Initialize the main window
 root = tk.Tk()
