@@ -47,15 +47,15 @@ def submit_data():
         label = labels[i]
         data[label] = entry.get()  # Store the input data
 
+    # Get the selected date from the DateEntry widget
+    selected_date = date_entry.get()
+
     # Call update functions from each loaded module
     for module in sheet_modules:
         try:
-            module.update_sheet(file_path, data)  # Call the update function for each module
-            print(f"Updated sheet in {module.__name__}")
+            module.update_sheet(file_path, data, selected_date)  # Pass selected date
         except AttributeError:
             print(f"No update function in {module.__name__}")
-        except Exception as e:
-            print(f"Error updating {module.__name__}: {e}")
 
 
 # Initialize the main window
