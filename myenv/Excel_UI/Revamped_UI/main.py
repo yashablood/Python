@@ -1,4 +1,5 @@
 import tkinter as tk
+import ui_controller 
 from tkinter import filedialog
 from tkcalendar import DateEntry
 from scripts import (
@@ -48,14 +49,20 @@ def submit_data():
         data[label] = entry.get()  # Store the input data
 
     # Get the selected date from the DateEntry widget
-    selected_date = date_entry.get()
+    selected_date = date_entry.get_date().strftime("%Y-%m-%d")
 
     # Call update functions from each loaded module
     for module in sheet_modules:
         try:
-            module.update_sheet(file_path, data, selected_date)  # Pass selected date
+            if module == data_script:
+                # Pass date only to data_script's update function
+                module.update_data_sheet(file_path, data, selected_date)
+            else:
+                # Call update without date for other modules
+                module.update_sheet(file_path, data)
         except AttributeError:
             print(f"No update function in {module.__name__}")
+
 
 
 # Initialize the main window
