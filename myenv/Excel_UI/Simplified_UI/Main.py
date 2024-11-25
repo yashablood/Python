@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 from utils.excel_handler import load_workbook, save_workbook
+from sheet_managers.recognition_entry_manager import RecognitionEntryManager
 import json
 import os
 
@@ -50,10 +51,21 @@ class DataEntryApp(tk.Tk):
                 self.workbook = load_workbook(last_file)
                 self.file_path = last_file
                 self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
-                print(f"Auto-loaded file: {last_file}")
+
+                # Debug: Print available sheets
+                print(f"Available sheets during auto-load: {list(self.workbook.sheetnames)}")
+
+                # Check for Recognitions sheet
+                if "Recognitions" in self.sheet_mapping:
+                    self.recognition_manager = RecognitionEntryManager(self.workbook)
+                    print(f"Auto-loaded file: {last_file}")
+                else:
+                    print(f"Recognitions sheet is missing in the workbook: {last_file}")
+                    tk.messagebox.showwarning("Warning", "The 'Recognitions' sheet is missing in the workbook.")
             except Exception as e:
                 print(f"Failed to auto-load file: {e}")
                 tk.messagebox.showerror("Error", f"Failed to auto-load file: {e}")
+
 
     def create_ui(self):
         """Create the main UI."""
@@ -114,39 +126,68 @@ class DataEntryApp(tk.Tk):
                 self.workbook = load_workbook(file_path)
                 self.file_path = file_path  # Store the selected file path
                 save_last_file_path(file_path)  # Save the file path for future use
-                self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
+
+                # Debug: Log available sheets
                 print(f"Loaded file: {file_path}")
-                print(f"Available sheets: {', '.join(self.sheet_mapping.keys())}")
+                print(f"Available sheets: {list(self.workbook.sheetnames)}")
+
+                self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
+
+                # Check for Recognitions sheet
+                if "Recognitions" in self.sheet_mapping:
+                    self.recognition_manager = RecognitionEntryManager(self.workbook)
+                    print("RecognitionEntryManager initialized successfully.")
+                else:
+                    print(f"Recognitions sheet is missing in the workbook: {file_path}")
+                    tk.messagebox.showwarning("Warning", "The 'Recognitions' sheet is missing in the workbook.")
             except Exception as e:
                 print(f"Error loading Excel file: {e}")
                 tk.messagebox.showerror("Error", f"Failed to load Excel file: {e}")
 
     def save_data(self):
-        """Save all entered data to their corresponding Excel sheets."""
+        """Save data based on the active tab."""
         if not self.workbook:
             tk.messagebox.showerror("Error", "No workbook loaded.")
             return
 
         try:
-            for field_name, (sheet_name, (row, col)) in self.field_to_sheet_mapping.items():
-                value = self.fields[field_name].get()  # Get user input
-                if sheet_name in self.sheet_mapping:
-                    sheet = self.sheet_mapping[sheet_name]
-                    sheet.cell(row=row, column=col).value = value
-                    print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{col}): '{value}'")
-                else:
-                    print(f"Sheet '{sheet_name}' not found in the workbook.")
+            # Get the index of the active tab
+            active_tab = self.notebook.index(self.notebook.select())
 
-            # Save changes to the original file
-            if self.file_path:
-                save_workbook(self.workbook, self.file_path)
-                print(f"Workbook saved to {self.file_path}")
-                tk.messagebox.showinfo("Success", f"Data saved to {self.file_path}!")
+            if active_tab == 1:  # Assuming Recognition Entry is the second tab (index 1)
+                # Use RecognitionEntryManager for saving recognition data
+                if hasattr(self, "recognition_manager") and self.recognition_manager:
+                    recognition_data = {k: v.get() for k, v in self.fields.items() if k in ["First Name", "Last Name", "Recognition", "Date"]}
+                    self.recognition_manager.add_recognition(recognition_data)
+                    print(f"Recognition data saved: {recognition_data}")
+                    tk.messagebox.showinfo("Success", "Recognition data saved successfully!")
+                else:
+                    print("Recognition manager not initialized.")
+                    tk.messagebox.showerror("Error", "Recognition manager not initialized. Please ensure the correct file is loaded.")
+
             else:
-                tk.messagebox.showerror("Error", "File path not set.")
+                # General save for other tabs
+                for field_name, (sheet_name, (row, col)) in self.field_to_sheet_mapping.items():
+                    value = self.fields[field_name].get()  # Get user input
+                    if sheet_name in self.sheet_mapping:
+                        sheet = self.sheet_mapping[sheet_name]
+                        sheet.cell(row=row, column=col).value = value
+                        print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{col}): '{value}'")
+                    else:
+                        print(f"Sheet '{sheet_name}' not found in the workbook.")
+
+                # Save changes to the original file
+                if self.file_path:
+                    save_workbook(self.workbook, self.file_path)
+                    print(f"Workbook saved to {self.file_path}")
+                    tk.messagebox.showinfo("Success", f"Data saved to {self.file_path}!")
+                else:
+                    tk.messagebox.showerror("Error", "File path not set.")
         except Exception as e:
             print(f"Error saving data: {e}")
             tk.messagebox.showerror("Error", f"Failed to save data: {e}")
+
+
 
     def save_and_close(self):
         """Save the workbook and close the app."""

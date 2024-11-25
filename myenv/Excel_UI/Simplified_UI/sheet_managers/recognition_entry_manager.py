@@ -8,9 +8,17 @@ class RecognitionEntryManager:
     def __init__(self, workbook):
         try:
             self.workbook = workbook
-            self.sheet = get_sheet(workbook, "Recognition Entry")
+
+            # Debug: Log available sheets
+            available_sheets = list(workbook.sheetnames)
+            print(f"Available sheets in RecognitionEntryManager: {available_sheets}")
+
+            # Attempt to retrieve the Recognitions sheet
+            self.sheet = get_sheet(workbook, "Recognitions")  # Correct sheet name
+            print("Successfully initialized RecognitionEntryManager with Recognitions sheet.")
         except Exception as e:
             logger.error(f"Error initializing RecognitionEntryManager: {e}")
+            print(f"Error initializing RecognitionEntryManager: {e}")
             raise
 
     def add_recognition(self, recognition):

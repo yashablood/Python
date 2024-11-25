@@ -33,10 +33,16 @@ def save_workbook(workbook, file_path):
 def get_sheet(workbook, sheet_name):
     """Retrieve a specific sheet by name."""
     try:
+        # Debug: Log available sheets
+        available_sheets = list(workbook.sheetnames)
+        print(f"get_sheet called. Available sheets: {available_sheets}")
+
         return workbook[sheet_name]
     except KeyError:
-        logging.error(f"Sheet not found: {sheet_name}")
+        logging.error(f"Sheet not found: {sheet_name}. Available sheets: {available_sheets}")
+        print(f"Sheet not found: {sheet_name}. Available sheets: {available_sheets}")
         raise KeyError(f"The sheet {sheet_name} does not exist in the workbook.")
+
 
 
 def write_to_cell(sheet, row, col, value):
