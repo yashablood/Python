@@ -443,17 +443,14 @@ def update_canvas(event=None):
     # Update the scroll region of the canvas
     canvas.configure(scrollregion=canvas.bbox("all"))
     
-    # Get the width of the canvas and the width of the content
+    # Center the content
     canvas_width = canvas.winfo_width()
-    content_width = sheet_window_frame.winfo_reqwidth()
+    content_width = sheet_window_frame.winfo_width()
     
-    # Calculate the x offset to center the content
-    if content_width < canvas_width:
-        x_offset = (canvas_width - content_width) // 2
-    else:
-        x_offset = 0
-
-    # Move the content to be centered
+    # Calculate x offset to center the content
+    x_offset = (canvas_width - content_width) // 2 if content_width < canvas_width else 0
+    
+    # Adjust position of the window (frame)
     canvas.itemconfig(window, x=x_offset)
 
 
@@ -494,13 +491,13 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
 # Create a frame inside the canvas to hold the content
-sheet_window_frame = tk.Frame(canvas, width=300, height=200)
+sheet_window_frame = tk.Frame(canvas)
+window = canvas.create_window(0, 0, window=sheet_window_frame, anchor='nw')
 
 # Add the frame to the canvas and store the window object globally
 window = canvas.create_window(0, 0, window=sheet_window_frame, anchor="center")
 
-# Bind the update_canvas function to resizing events
-sheet_window_frame.bind("<Configure>", update_canvas)
+# Bind to the canvas resize event
 canvas.bind("<Configure>", update_canvas)
 
 # Configure the canvas scroll region

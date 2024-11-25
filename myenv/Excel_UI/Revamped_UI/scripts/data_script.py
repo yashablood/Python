@@ -18,7 +18,7 @@ def update_data_sheet(file_path, data, date):
             break
 
     if date_column is None:
-        print(f"Date {date} not found in sheet.")
+        print(f"Date {date} not found in {sheet} sheet.")
         return
 
     # Update rows based on labels in data
