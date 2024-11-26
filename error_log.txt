@@ -1,0 +1,30 @@
+2024-11-25 10:49:23,387 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 10:49:23,387 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 10:49:31,898 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 10:49:31,898 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 10:56:51,484 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 10:56:51,485 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 10:57:16,171 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 10:57:16,171 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 10:57:30,290 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 10:57:30,290 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:04:13,829 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:04:13,829 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:04:34,977 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:04:34,977 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:10:51,830 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:10:51,830 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:10:58,889 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:10:58,889 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:11:06,514 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:11:06,515 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:11:51,990 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:11:51,991 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:12:26,316 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:12:26,316 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:15:46,004 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:15:46,004 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:17:12,676 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:17:12,676 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2024-11-25 11:26:38,711 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:26:38,712 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'

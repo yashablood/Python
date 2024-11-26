@@ -1,0 +1,2 @@
+2024-11-25 11:26:20,045 - ERROR - Sheet not found: Recognition Entry
+2024-11-25 11:26:20,045 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
