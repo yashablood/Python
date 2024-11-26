@@ -95,13 +95,26 @@ class DataEntryApp(tk.Tk):
         # Initialize fields
         self.fields = {field: tk.StringVar() for field in self.field_to_sheet_mapping.keys()}
 
-        # Add fields to tabs
-        self.add_fields(self.sheet1_frame, self.fields)
+        # Add a LabelFrame for Sheet 1 fields
+        sheet1_group = ttk.LabelFrame(self.sheet1_frame, text="Data Fields", padding=(10, 10))
+        sheet1_group.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Add fields to the LabelFrame
+        for idx, (label, var) in enumerate(self.fields.items()):
+            ttk.Label(sheet1_group, text=label).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
+            ttk.Entry(sheet1_group, textvariable=var).grid(row=idx, column=1, padx=10, pady=5, sticky="ew")
+            sheet1_group.columnconfigure(1, weight=1)
+
+        # Add fields to the Recognition Entry tab
         self.add_fields(self.recognition_frame, self.recognition_fields)
 
         # Add save button
         save_button = ttk.Button(self, text="Save Data", command=self.save_data)
         save_button.pack(pady=10)
+
+        # Bind the Enter key to the Save Data button
+        save_button.bind("<Return>", lambda event: self.save_data())
+
 
     def add_fields(self, frame, fields):
         """Add labeled input fields for a given set of fields."""
@@ -144,17 +157,49 @@ class DataEntryApp(tk.Tk):
             # Get the index of the active tab
             active_tab = self.notebook.index(self.notebook.select())
 
-            if active_tab == 1:  # Assuming Recognition Entry is the second tab (index 1)
+            if active_tab == 0:  # Sheet 1 tab
+                for field_name, (sheet_name, (row, col)) in self.field_to_sheet_mapping.items():
+                    value = self.fields[field_name].get()  # Get user input
+                    if sheet_name in self.sheet_mapping:
+                        sheet = self.sheet_mapping[sheet_name]
+                        sheet.cell(row=row, column=col).value = value
+                        print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{col}): '{value}'")
+                    else:
+                        print(f"Sheet '{sheet_name}' not found in the workbook.")
+
+                if self.file_path:
+                    try:
+                        print(f"Attempting to save workbook to: {self.file_path}")
+                        save_workbook(self.workbook, self.file_path)
+                        print(f"Workbook saved to {self.file_path}")
+                        tk.messagebox.showinfo("Success", f"Data saved to {self.file_path}!")
+
+                        # Reset focus to the first entry in Sheet 1
+                        first_field_entry = self.sheet1_frame.grid_slaves(row=0, column=1)[0]
+                        first_field_entry.focus_set()
+                    except PermissionError:
+                        tk.messagebox.showerror(
+                            "Error",
+                            f"The file {self.file_path} is open in another program. Please close it and try again.",
+                        )
+                    except Exception as e:
+                        tk.messagebox.showerror("Error", f"An unexpected error occurred: {e}")
+                else:
+                    tk.messagebox.showerror("Error", "File path not set.")
+
+
+
+            elif active_tab == 1:  # Recognition Entry tab
                 if hasattr(self, "recognition_manager") and self.recognition_manager:
-                    print("Recognition manager found. Preparing to save data...")
                     recognition_data = {k: v.get() for k, v in self.recognition_fields.items()}
-                    
-                    print(f"Calling add_recognition with data: {recognition_data} and file path: {self.file_path}")
                     self.recognition_manager.add_recognition(recognition_data, self.file_path)
                     print(f"Recognition data saved: {recognition_data}")
                     tk.messagebox.showinfo("Success", "Recognition data saved successfully!")
+
+                    # Reset focus to the first entry in Recognition Entry
+                    first_field_entry = self.recognition_frame.grid_slaves(row=0, column=1)[0]
+                    first_field_entry.focus_set()
                 else:
-                    print("Recognition manager not initialized.")
                     tk.messagebox.showerror("Error", "Recognition manager not initialized. Please load a valid Excel file.")
 
             else:
