@@ -22,11 +22,13 @@ def load_workbook(file_path):
 
 
 def save_workbook(workbook, file_path):
-    """Save the Excel workbook."""
+    """Save the workbook to the specified file path."""
     try:
+        print(f"Attempting to save workbook to: {file_path}")
         workbook.save(file_path)
+        print(f"Workbook successfully saved to: {file_path}")
     except Exception as e:
-        logging.error(f"Failed to save workbook: {file_path} - {e}")
+        print(f"Error saving workbook: {e}")
         raise
 
 
@@ -46,11 +48,12 @@ def get_sheet(workbook, sheet_name):
 
 
 def write_to_cell(sheet, row, col, value):
-    """Write a value to a specific cell."""
+    """Write a value to a specific cell in the sheet."""
     try:
-        sheet.cell(row=row, column=col, value=value)
+        sheet.cell(row=row, column=col).value = value
+        print(f"Value '{value}' written to Row {row}, Column {col} in Sheet '{sheet.title}'")
     except Exception as e:
-        logging.error(f"Failed to write to cell: row={row}, col={col}, value={value} - {e}")
+        print(f"Error writing to cell ({row}, {col}): {e}")
         raise
 
 
