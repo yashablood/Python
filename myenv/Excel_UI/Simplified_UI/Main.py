@@ -4,6 +4,7 @@ from tkinter import filedialog
 from utils.excel_handler import load_workbook, save_workbook
 from sheet_managers.recognition_entry_manager import RecognitionEntryManager
 from tkcalendar import DateEntry
+from datetime import datetime, timedelta
 import json
 import os
 
@@ -62,17 +63,53 @@ class DataEntryApp(tk.Tk):
                 print(f"Failed to auto-load file: {e}")
                 tk.messagebox.showerror("Error", f"Failed to auto-load file: {e}")
 
+    def adjust_window_size(self):
+        """Adjust the window size based on the content."""
+        self.update_idletasks()  # Ensure all geometry calculations are updated
+        width = self.notebook.winfo_reqwidth() + 20  # Add padding
+        height = self.notebook.winfo_reqheight() + 20
+        self.geometry(f"{width}x{height}")
+
     def create_ui(self):
         """Create the main UI."""
         # File selection button
         file_button = ttk.Button(self, text="Open Excel File", command=self.load_excel_file)
-        file_button.pack(pady=10)
+        file_button.pack(pady=5)  # Reduce padding to tighten layout
 
-        # Notebook for tabs
-        self.notebook = ttk.Notebook(self)
-        self.notebook.pack(fill="both", expand=True, padx=10, pady=10)
+        # Create a container for the scrollable area
+        container = ttk.Frame(self)
+        container.pack(fill="both", expand=True, padx=5, pady=5)  # Adjust padding here
 
-        # Tabs
+        # Create canvas and scrollbar
+        canvas = tk.Canvas(container)
+        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+
+        # Configure the canvas and scrollbar
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Pack the canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Enable mouse wheel scrolling
+        def on_mouse_wheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        canvas.bind_all("<MouseWheel>", on_mouse_wheel)  # Windows/Linux
+        canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))  # macOS scroll up
+        canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))   # macOS scroll down
+
+        # Add a Notebook for tabs inside the scrollable frame
+        self.notebook = ttk.Notebook(scrollable_frame)
+        self.notebook.pack(fill="both", expand=True, padx=5, pady=5)  # Adjust padding here
+
+        # Tabs for Sheet 1 and Recognition Entry
         self.sheet1_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.sheet1_frame, text="Sheet 1")
 
@@ -81,11 +118,23 @@ class DataEntryApp(tk.Tk):
 
         # Define field mappings
         self.field_to_sheet_mapping = {
-            "Days without Incident": ("Dashboard Rev 2", (4, 2)),
+            "Days without Incident": ("Data", (2, 3)),
             "Haz ID's": ("Data", (3, 3)),
             "Safety Gemba Walk": ("Data", (4, 3)),
             "7S (Zone 26)": ("Data", (5, 3)),
             "7S (Zone 51)": ("Data", (6, 3)),
+            "Errors": ("Data", (7, 3)),
+            "PCD Returns": ("Data", (8, 3)),
+            "Jobs on Hold": ("Data", (9, 3)),
+            "Productivity": ("Data", (10, 3)),
+            "OTIF": ("Data", (11, 3)),
+            "Huddles": ("Data", (12, 3)),
+            "Truck Fill %": ("Data", (13, 3)),
+            "Recognitions": ("Data", (14, 3)),
+            "MC Compliance": ("Data", (15, 3)),
+            "Cost Savings": ("Data", (16, 3)),
+            "Rever's": ("Data", (17, 3)),
+            "Project's": ("Data", (18, 3)),
         }
 
         # Define recognition fields separately
@@ -101,14 +150,19 @@ class DataEntryApp(tk.Tk):
 
         # Add a LabelFrame for Sheet 1 fields
         sheet1_group = ttk.LabelFrame(self.sheet1_frame, text="Data Fields", padding=(10, 10))
-        sheet1_group.pack(fill="both", expand=True, padx=10, pady=10)
+        sheet1_group.pack(fill="both", expand=True, padx=5, pady=5)  # Adjust padding here
 
         # Add a DateEntry for selecting the date
         self.date_selection = tk.StringVar()
-        date_picker = DateEntry(sheet1_group, textvariable=self.date_selection, width=20, background='darkblue',
-                                foreground='white', borderwidth=2)
+        date_picker = DateEntry(sheet1_group, textvariable=self.date_selection, width=20,
+                                date_pattern="MM/dd/yyyy", background='darkblue', foreground='white', borderwidth=2)
         date_picker.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
         ttk.Label(sheet1_group, text="Select Date:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+        # Toggle for Days without Incident
+        self.reset_days_toggle = tk.BooleanVar(value=False)
+        reset_button = ttk.Checkbutton(sheet1_group, text="Reset Days", variable=self.reset_days_toggle)
+        reset_button.grid(row=1, column=2, padx=10, pady=5, sticky="ew")
 
         # Add fields to the LabelFrame
         for idx, (label, var) in enumerate(self.fields.items(), start=1):  # Start after the date picker
@@ -119,12 +173,15 @@ class DataEntryApp(tk.Tk):
         # Add fields to the Recognition Entry tab
         self.add_fields(self.recognition_frame, self.recognition_fields)
 
-        # Add save button
-        save_button = ttk.Button(self, text="Save Data", command=self.save_data)
+        # Add Save Data button at the bottom
+        save_button = ttk.Button(scrollable_frame, text="Save Data", command=self.save_data)
         save_button.pack(pady=10)
 
         # Bind the Enter key to the Save Data button
         save_button.bind("<Return>", lambda event: self.save_data())
+
+        # Adjust window size dynamically after UI is created
+        self.adjust_window_size()
 
     def add_fields(self, frame, fields):
         """Add labeled input fields for a given set of fields."""
@@ -132,6 +189,36 @@ class DataEntryApp(tk.Tk):
             ttk.Label(frame, text=field_name).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
             ttk.Entry(frame, textvariable=var).grid(row=idx, column=1, padx=10, pady=5, sticky="ew")
             frame.columnconfigure(1, weight=1)
+
+    def manage_days_without_incident(self):
+        """Manage the Days without Incident counter."""
+        # Load the current counter and last update date
+        config_file = "days_without_incident.json"
+        if not os.path.exists(config_file):
+            data = {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
+        else:
+            with open(config_file, "r") as f:
+                data = json.load(f)
+
+        # Parse the last date and calculate days passed
+        last_date = datetime.strptime(data["last_date"], "%Y-%m-%d")
+        today = datetime.now().date()
+
+        if self.reset_days_toggle.get():
+            # Reset the counter to 0 if toggle is selected
+            data["counter"] = 0
+        else:
+            # Increment the counter based on days passed
+            days_passed = (today - last_date.date()).days
+            if days_passed > 0:
+                data["counter"] += days_passed
+
+        # Save the updated counter and last date
+        data["last_date"] = today.strftime("%Y-%m-%d")
+        with open(config_file, "w") as f:
+            json.dump(data, f)
+
+        return data["counter"]
 
     def load_excel_file(self):
         """Load the Excel file and remember its path."""
@@ -169,15 +256,24 @@ class DataEntryApp(tk.Tk):
                     tk.messagebox.showerror("Error", "Please select a date.")
                     return
 
+                # Handle Days without Incident logic
+                days_without_incident = self.manage_days_without_incident()
+                self.fields["Days without Incident"].set(days_without_incident)
+
                 data_sheet = self.sheet_mapping.get("Data")
                 if not data_sheet:
                     tk.messagebox.showerror("Error", "Data sheet not found in the workbook.")
                     return
 
                 # Find the column corresponding to the selected date
+                selected_date = self.date_selection.get()
                 date_column = None
                 for col in range(2, data_sheet.max_column + 1):
-                    if data_sheet.cell(row=1, column=col).value == selected_date:
+                    cell_value = data_sheet.cell(row=1, column=col).value
+                    # Convert cell_value to string in the same format
+                    if cell_value and isinstance(cell_value, datetime):
+                        cell_value = cell_value.strftime("%m/%d/%Y")  # Convert datetime to MM/DD/YYYY
+                    if cell_value == selected_date:
                         date_column = col
                         break
 
