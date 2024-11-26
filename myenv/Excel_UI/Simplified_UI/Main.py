@@ -3,15 +3,18 @@ from tkinter import ttk
 from tkinter import filedialog
 from utils.excel_handler import load_workbook, save_workbook
 from sheet_managers.recognition_entry_manager import RecognitionEntryManager
+from tkcalendar import DateEntry
 import json
 import os
 
 CONFIG_FILE = "config.json"  # File to store the last file path
 
+
 def save_last_file_path(file_path):
     """Save the last selected file path to a configuration file."""
     with open(CONFIG_FILE, "w") as f:
         json.dump({"last_file": file_path}, f)
+
 
 def load_last_file_path():
     """Load the last selected file path from the configuration file."""
@@ -20,6 +23,7 @@ def load_last_file_path():
             data = json.load(f)
             return data.get("last_file")
     return None
+
 
 class DataEntryApp(tk.Tk):
     def __init__(self):
@@ -99,8 +103,15 @@ class DataEntryApp(tk.Tk):
         sheet1_group = ttk.LabelFrame(self.sheet1_frame, text="Data Fields", padding=(10, 10))
         sheet1_group.pack(fill="both", expand=True, padx=10, pady=10)
 
+        # Add a DateEntry for selecting the date
+        self.date_selection = tk.StringVar()
+        date_picker = DateEntry(sheet1_group, textvariable=self.date_selection, width=20, background='darkblue',
+                                foreground='white', borderwidth=2)
+        date_picker.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        ttk.Label(sheet1_group, text="Select Date:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
         # Add fields to the LabelFrame
-        for idx, (label, var) in enumerate(self.fields.items()):
+        for idx, (label, var) in enumerate(self.fields.items(), start=1):  # Start after the date picker
             ttk.Label(sheet1_group, text=label).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
             ttk.Entry(sheet1_group, textvariable=var).grid(row=idx, column=1, padx=10, pady=5, sticky="ew")
             sheet1_group.columnconfigure(1, weight=1)
@@ -115,7 +126,6 @@ class DataEntryApp(tk.Tk):
         # Bind the Enter key to the Save Data button
         save_button.bind("<Return>", lambda event: self.save_data())
 
-
     def add_fields(self, frame, fields):
         """Add labeled input fields for a given set of fields."""
         for idx, (field_name, var) in enumerate(fields.items()):
@@ -125,7 +135,6 @@ class DataEntryApp(tk.Tk):
 
     def load_excel_file(self):
         """Load the Excel file and remember its path."""
-        print(f"Loading workbook from {self.file_path}...")
         file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
         if file_path:
             try:
@@ -134,13 +143,10 @@ class DataEntryApp(tk.Tk):
                 save_last_file_path(file_path)  # Save the file path for future use
                 self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
 
-                # Check for Recognitions sheet
                 if "Recognitions" in self.sheet_mapping:
                     print("Initializing RecognitionEntryManager...")
                     self.recognition_manager = RecognitionEntryManager(self.workbook)
                     print("RecognitionEntryManager initialized successfully.")
-                else:
-                    print("Recognitions sheet is missing.")
 
                 print(f"Loaded file: {file_path}")
             except Exception as e:
@@ -158,25 +164,39 @@ class DataEntryApp(tk.Tk):
             active_tab = self.notebook.index(self.notebook.select())
 
             if active_tab == 0:  # Sheet 1 tab
-                for field_name, (sheet_name, (row, col)) in self.field_to_sheet_mapping.items():
+                selected_date = self.date_selection.get()
+                if not selected_date:
+                    tk.messagebox.showerror("Error", "Please select a date.")
+                    return
+
+                data_sheet = self.sheet_mapping.get("Data")
+                if not data_sheet:
+                    tk.messagebox.showerror("Error", "Data sheet not found in the workbook.")
+                    return
+
+                # Find the column corresponding to the selected date
+                date_column = None
+                for col in range(2, data_sheet.max_column + 1):
+                    if data_sheet.cell(row=1, column=col).value == selected_date:
+                        date_column = col
+                        break
+
+                if not date_column:
+                    tk.messagebox.showerror("Error", f"Selected date '{selected_date}' not found in the Data sheet.")
+                    return
+
+                # Save data to the correct column under the selected date
+                for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
                     value = self.fields[field_name].get()  # Get user input
-                    if sheet_name in self.sheet_mapping:
-                        sheet = self.sheet_mapping[sheet_name]
-                        sheet.cell(row=row, column=col).value = value
-                        print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{col}): '{value}'")
-                    else:
-                        print(f"Sheet '{sheet_name}' not found in the workbook.")
+                    if sheet_name == "Data":
+                        data_sheet.cell(row=row, column=date_column).value = value
+                        print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{date_column}): '{value}'")
 
                 if self.file_path:
                     try:
-                        print(f"Attempting to save workbook to: {self.file_path}")
                         save_workbook(self.workbook, self.file_path)
                         print(f"Workbook saved to {self.file_path}")
                         tk.messagebox.showinfo("Success", f"Data saved to {self.file_path}!")
-
-                        # Reset focus to the first entry in Sheet 1
-                        first_field_entry = self.sheet1_frame.grid_slaves(row=0, column=1)[0]
-                        first_field_entry.focus_set()
                     except PermissionError:
                         tk.messagebox.showerror(
                             "Error",
@@ -186,8 +206,6 @@ class DataEntryApp(tk.Tk):
                         tk.messagebox.showerror("Error", f"An unexpected error occurred: {e}")
                 else:
                     tk.messagebox.showerror("Error", "File path not set.")
-
-
 
             elif active_tab == 1:  # Recognition Entry tab
                 if hasattr(self, "recognition_manager") and self.recognition_manager:
@@ -195,39 +213,8 @@ class DataEntryApp(tk.Tk):
                     self.recognition_manager.add_recognition(recognition_data, self.file_path)
                     print(f"Recognition data saved: {recognition_data}")
                     tk.messagebox.showinfo("Success", "Recognition data saved successfully!")
-
-                    # Reset focus to the first entry in Recognition Entry
-                    first_field_entry = self.recognition_frame.grid_slaves(row=0, column=1)[0]
-                    first_field_entry.focus_set()
                 else:
                     tk.messagebox.showerror("Error", "Recognition manager not initialized. Please load a valid Excel file.")
-
-            else:
-                # General save for other tabs
-                for field_name, (sheet_name, (row, col)) in self.field_to_sheet_mapping.items():
-                    value = self.fields[field_name].get()  # Get user input
-                    if sheet_name in self.sheet_mapping:
-                        sheet = self.sheet_mapping[sheet_name]
-                        sheet.cell(row=row, column=col).value = value
-                        print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{col}): '{value}'")
-                    else:
-                        print(f"Sheet '{sheet_name}' not found in the workbook.")
-
-                if self.file_path:
-                    try:
-                        print(f"Attempting to save workbook to: {self.file_path}")
-                        save_workbook(self.workbook, self.file_path)
-                        print(f"Workbook saved to {self.file_path}")
-                        tk.messagebox.showinfo("Success", f"Data saved to {self.file_path}!")
-                    except PermissionError:
-                        tk.messagebox.showerror(
-                            "Error",
-                            f"The file {self.file_path} is open in another program. Please close it and try again.",
-                        )
-                    except Exception as e:
-                        tk.messagebox.showerror("Error", f"An unexpected error occurred: {e}")
-                else:
-                    tk.messagebox.showerror("Error", "File path not set.")
 
         except Exception as e:
             print(f"Error saving data: {e}")
