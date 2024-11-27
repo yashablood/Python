@@ -64,3 +64,19 @@ def read_cell(sheet, row, col):
     except Exception as e:
         logging.error(f"Failed to read cell: row={row}, col={col} - {e}")
         raise
+
+def calculate_truck_fill_percentage(value):
+    """
+    Validate and calculate the Truck Fill % based on the maximum value of 26.
+    :param value: The entered value as a number (float or int).
+    :return: The calculated percentage (float).
+    :raises ValueError: If the value is not a number or is outside the valid range.
+    """
+    try:
+        value = float(value)  # Ensure the value is numeric
+        if 0 <= value <= 26:
+            return (value / 26) * 100  # Calculate percentage
+        else:
+            raise ValueError("Value must be between 0 and 26.")
+    except ValueError:
+        raise ValueError("Invalid input. Please enter a numeric value between 0 and 26.")
