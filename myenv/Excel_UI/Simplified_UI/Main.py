@@ -40,6 +40,8 @@ class DataEntryApp(tk.Tk):
         self.fields = {}  # Holds StringVar instances for each input field
         self.recognition_fields = {}  # Holds StringVar instances for recognition input fields
         self.field_to_sheet_mapping = {}  # Maps fields to sheets and cell locations
+        self.date_selection = tk.StringVar()
+
 
         # Attempt to auto-load the last file
         self.auto_load_last_file()
@@ -297,9 +299,9 @@ class DataEntryApp(tk.Tk):
                 if truck_fill_field:
                     try:
                         entered_value = truck_fill_field.get()
-                        percentage = calculate_truck_fill_percentage(entered_value)
-                        truck_fill_field.set(f"{percentage:.2f}")  # Update the field with the percentage
-                        print(f"Calculated Truck Fill %: {percentage:.2f}")
+                        percentage = calculate_truck_fill_percentage(entered_value)  # Now includes the '%' symbol
+                        truck_fill_field.set(percentage)  # Update the field with the formatted percentage
+                        print(f"Calculated Truck Fill %: {percentage}")
                     except ValueError as e:
                         tk.messagebox.showerror("Error", str(e))
                         return
@@ -310,7 +312,7 @@ class DataEntryApp(tk.Tk):
                     if sheet_name == "Data":
                         data_sheet.cell(row=row, column=date_column).value = value
                         print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{date_column}): '{value}'")
-
+            
                 if self.file_path:
                     try:
                         save_workbook(self.workbook, self.file_path)

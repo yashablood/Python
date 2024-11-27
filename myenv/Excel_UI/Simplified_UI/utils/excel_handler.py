@@ -69,14 +69,15 @@ def calculate_truck_fill_percentage(value):
     """
     Validate and calculate the Truck Fill % based on the maximum value of 26.
     :param value: The entered value as a number (float or int).
-    :return: The calculated percentage (float).
+    :return: The calculated percentage as a string with a '%' symbol.
     :raises ValueError: If the value is not a number or is outside the valid range.
     """
     try:
         value = float(value)  # Ensure the value is numeric
         if 0 <= value <= 26:
-            return (value / 26) * 100  # Calculate percentage
+            percentage = (value / 26) * 100  # Calculate percentage
+            return f"{percentage:.2f}%"  # Format with the '%' symbol
         else:
             raise ValueError("Value must be between 0 and 26.")
     except ValueError:
-        raise ValueError("Invalid input. Please enter a numeric value between 0 and 26.")
+        raise ValueError("Invalid input. Please enter a numeric value between 0 and 26.")+
