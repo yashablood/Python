@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
-from utils.excel_handler import load_workbook, save_workbook
+from utils.excel_handler import load_workbook, save_workbook, calculate_truck_fill_percentage
 from sheet_managers.recognition_entry_manager import RecognitionEntryManager
 from tkcalendar import DateEntry
 from datetime import datetime, timedelta
@@ -10,6 +10,7 @@ import os
 
 CONFIG_FILE = "config.json"  # File to store the last file path
 
+print(calculate_truck_fill_percentage(13))  # Should print 50.0
 
 def save_last_file_path(file_path):
     """Save the last selected file path to a configuration file."""
@@ -39,6 +40,8 @@ class DataEntryApp(tk.Tk):
         self.fields = {}  # Holds StringVar instances for each input field
         self.recognition_fields = {}  # Holds StringVar instances for recognition input fields
         self.field_to_sheet_mapping = {}  # Maps fields to sheets and cell locations
+        self.date_selection = tk.StringVar()
+
 
         # Attempt to auto-load the last file
         self.auto_load_last_file()
@@ -204,20 +207,30 @@ class DataEntryApp(tk.Tk):
         last_date = datetime.strptime(data["last_date"], "%Y-%m-%d")
         today = datetime.now().date()
 
+        # Check if toggle is on
         if self.reset_days_toggle.get():
             # Reset the counter to 0 if toggle is selected
             data["counter"] = 0
+            print("Resetting Days without Incident to 0.")
         else:
-            # Increment the counter based on days passed
-            days_passed = (today - last_date.date()).days
-            if days_passed > 0:
-                data["counter"] += days_passed
+            # Use a custom value if provided
+            custom_value = self.fields["Days without Incident"].get()
+            if custom_value.isdigit():
+                data["counter"] = int(custom_value)
+                print(f"Setting Days without Incident to custom value: {custom_value}.")
+            else:
+                # Increment the counter based on days passed
+                days_passed = (today - last_date).days
+                if days_passed > 0:
+                    data["counter"] += days_passed
+                    print(f"Incrementing Days without Incident by {days_passed} days.")
 
         # Save the updated counter and last date
         data["last_date"] = today.strftime("%Y-%m-%d")
         with open(config_file, "w") as f:
             json.dump(data, f)
 
+        print(f"Days without Incident: {data['counter']} (Last updated: {data['last_date']})")
         return data["counter"]
 
     def load_excel_file(self):
@@ -281,13 +294,25 @@ class DataEntryApp(tk.Tk):
                     tk.messagebox.showerror("Error", f"Selected date '{selected_date}' not found in the Data sheet.")
                     return
 
+                # Handle "Truck Fill %" calculation
+                truck_fill_field = self.fields.get("Truck Fill %")
+                if truck_fill_field:
+                    try:
+                        entered_value = truck_fill_field.get()
+                        percentage = calculate_truck_fill_percentage(entered_value)  # Now includes the '%' symbol
+                        truck_fill_field.set(percentage)  # Update the field with the formatted percentage
+                        print(f"Calculated Truck Fill %: {percentage}")
+                    except ValueError as e:
+                        tk.messagebox.showerror("Error", str(e))
+                        return
+
                 # Save data to the correct column under the selected date
                 for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
                     value = self.fields[field_name].get()  # Get user input
                     if sheet_name == "Data":
                         data_sheet.cell(row=row, column=date_column).value = value
                         print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{date_column}): '{value}'")
-
+            
                 if self.file_path:
                     try:
                         save_workbook(self.workbook, self.file_path)
