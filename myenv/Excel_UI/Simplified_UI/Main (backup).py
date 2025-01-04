@@ -4,13 +4,13 @@ from tkinter import filedialog
 from utils.excel_handler import load_workbook, save_workbook, calculate_truck_fill_percentage
 from sheet_managers.recognition_entry_manager import RecognitionEntryManager
 from tkcalendar import DateEntry
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
 
-# Entry UI
-
 CONFIG_FILE = "config.json"  # File to store the last file path
+
+print(calculate_truck_fill_percentage(13))  # Should print 50.0
 
 def save_last_file_path(file_path):
     """Save the last selected file path to a configuration file."""
@@ -167,10 +167,6 @@ class DataEntryApp(tk.Tk):
         reset_button = ttk.Checkbutton(sheet1_group, text="Reset Days", variable=self.reset_days_toggle)
         reset_button.grid(row=1, column=2, padx=10, pady=5, sticky="ew")
 
-        # Populate the Days without Incident field on load
-        days_without_incident = self.manage_days_without_incident()
-        self.fields["Days without Incident"].set(days_without_incident)
-
         # Add fields to the LabelFrame
         for idx, (label, var) in enumerate(self.fields.items(), start=1):  # Start after the date picker
             ttk.Label(sheet1_group, text=label).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
@@ -208,37 +204,34 @@ class DataEntryApp(tk.Tk):
                 data = json.load(f)
 
         # Parse the last date and calculate days passed
-        last_date = datetime.strptime(data["last_date"], "%Y-%m-%d").date()
+        last_date = datetime.strptime(data["last_date"], "%Y-%m-%d")
         today = datetime.now().date()
 
-        # Fetch the current value from the Excel sheet if available
-        data_sheet = self.sheet_mapping.get("Data")
-        if data_sheet:
-            previous_value_cell = data_sheet.cell(row=2, column=2)  # Example location
-            if previous_value_cell.value and isinstance(previous_value_cell.value, (int, float)):
-                previous_value = int(previous_value_cell.value)
-            else:
-                previous_value = 0
-        else:
-            previous_value = data["counter"]
-
-        # Determine the new value
+        # Check if toggle is on
         if self.reset_days_toggle.get():
             # Reset the counter to 0 if toggle is selected
-            new_value = 0
+            data["counter"] = 0
             print("Resetting Days without Incident to 0.")
         else:
-            days_passed = (today - last_date).days
-            new_value = previous_value + days_passed if days_passed > 0 else previous_value
+            # Use a custom value if provided
+            custom_value = self.fields["Days without Incident"].get()
+            if custom_value.isdigit():
+                data["counter"] = int(custom_value)
+                print(f"Setting Days without Incident to custom value: {custom_value}.")
+            else:
+                # Increment the counter based on days passed
+                days_passed = (today - last_date).days
+                if days_passed > 0:
+                    data["counter"] += days_passed
+                    print(f"Incrementing Days without Incident by {days_passed} days.")
 
         # Save the updated counter and last date
-        data["counter"] = new_value
         data["last_date"] = today.strftime("%Y-%m-%d")
         with open(config_file, "w") as f:
             json.dump(data, f)
 
-        print(f"Days without Incident: {new_value} (Last updated: {data['last_date']})")
-        return new_value
+        print(f"Days without Incident: {data['counter']} (Last updated: {data['last_date']})")
+        return data["counter"]
 
     def load_excel_file(self):
         """Load the Excel file and remember its path."""
@@ -285,17 +278,12 @@ class DataEntryApp(tk.Tk):
                     tk.messagebox.showerror("Error", "Data sheet not found in the workbook.")
                     return
 
-                # Save the updated Days without Incident value
-                if "Days without Incident" in self.fields:
-                    new_value = self.fields["Days without Incident"].get()
-                    data_sheet.cell(row=2, column=2).value = new_value  # Example location
-                    print(f"Updated Days without Incident to {new_value} in Excel.")
-
-
                 # Find the column corresponding to the selected date
+                selected_date = self.date_selection.get()
                 date_column = None
                 for col in range(2, data_sheet.max_column + 1):
                     cell_value = data_sheet.cell(row=1, column=col).value
+                    # Convert cell_value to string in the same format
                     if cell_value and isinstance(cell_value, datetime):
                         cell_value = cell_value.strftime("%m/%d/%Y")  # Convert datetime to MM/DD/YYYY
                     if cell_value == selected_date:
@@ -311,8 +299,7 @@ class DataEntryApp(tk.Tk):
                 if truck_fill_field:
                     try:
                         entered_value = truck_fill_field.get()
-                        # Calculate and format the percentage using the helper function
-                        percentage = calculate_truck_fill_percentage(entered_value)
+                        percentage = calculate_truck_fill_percentage(entered_value)  # Now includes the '%' symbol
                         truck_fill_field.set(percentage)  # Update the field with the formatted percentage
                         print(f"Calculated Truck Fill %: {percentage}")
                     except ValueError as e:
@@ -325,8 +312,7 @@ class DataEntryApp(tk.Tk):
                     if sheet_name == "Data":
                         data_sheet.cell(row=row, column=date_column).value = value
                         print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{date_column}): '{value}'")
-
-                # Save the workbook
+            
                 if self.file_path:
                     try:
                         save_workbook(self.workbook, self.file_path)
