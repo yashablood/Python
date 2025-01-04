@@ -80,4 +80,4 @@ def calculate_truck_fill_percentage(value):
         else:
             raise ValueError("Value must be between 0 and 26.")
     except ValueError:
-        raise ValueError("Invalid input. Please enter a numeric value between 0 and 26.")+
+        raise ValueError("Invalid input. Please enter a numeric value between 0 and 26.")
