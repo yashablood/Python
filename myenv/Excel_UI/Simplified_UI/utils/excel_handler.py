@@ -41,17 +41,20 @@ def get_sheet(workbook, sheet_name):
 
         return workbook[sheet_name]
     except KeyError:
-        logging.error(f"Sheet not found: {sheet_name}. Available sheets: {available_sheets}")
-        print(f"Sheet not found: {sheet_name}. Available sheets: {available_sheets}")
-        raise KeyError(f"The sheet {sheet_name} does not exist in the workbook.")
-
+        logging.error(
+            f"Sheet not found: {sheet_name}. Available sheets: {available_sheets}")
+        print(
+            f"Sheet not found: {sheet_name}. Available sheets: {available_sheets}")
+        raise KeyError(
+            f"The sheet {sheet_name} does not exist in the workbook.")
 
 
 def write_to_cell(sheet, row, col, value):
     """Write a value to a specific cell in the sheet."""
     try:
         sheet.cell(row=row, column=col).value = value
-        print(f"Value '{value}' written to Row {row}, Column {col} in Sheet '{sheet.title}'")
+        print(
+            f"Value '{value}' written to Row {row}, Column {col} in Sheet '{sheet.title}'")
     except Exception as e:
         print(f"Error writing to cell ({row}, {col}): {e}")
         raise
@@ -64,6 +67,7 @@ def read_cell(sheet, row, col):
     except Exception as e:
         logging.error(f"Failed to read cell: row={row}, col={col} - {e}")
         raise
+
 
 def calculate_truck_fill_percentage(value):
     """
@@ -80,4 +84,5 @@ def calculate_truck_fill_percentage(value):
         else:
             raise ValueError("Value must be between 0 and 26.")
     except ValueError:
-        raise ValueError("Invalid input. Please enter a numeric value between 0 and 26.")
+        raise ValueError(
+            "Invalid input. Please enter a numeric value between 0 and 26.")

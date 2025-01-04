@@ -1,30 +1,108 @@
 import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog
+from tkinter import ttk, filedialog, messagebox
 from utils.excel_handler import load_workbook, save_workbook, calculate_truck_fill_percentage
 from sheet_managers.recognition_entry_manager import RecognitionEntryManager
 from tkcalendar import DateEntry
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
+import logging
 
-# Entry UI
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 CONFIG_FILE = "config.json"  # File to store the last file path
+DAYS_WITHOUT_INCIDENT_FILE = "days_without_incident.json"
+
 
 def save_last_file_path(file_path):
     """Save the last selected file path to a configuration file."""
-    with open(CONFIG_FILE, "w") as f:
-        json.dump({"last_file": file_path}, f)
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump({"last_file": file_path}, f)
+    except Exception as e:
+        logging.error(f"Failed to save last file path: {e}")
 
 
 def load_last_file_path():
     """Load the last selected file path from the configuration file."""
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, "r") as f:
-            data = json.load(f)
-            return data.get("last_file")
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r") as f:
+                data = json.load(f)
+                return data.get("last_file")
+    except Exception as e:
+        logging.error(f"Failed to load last file path: {e}")
     return None
+
+
+def manage_days_without_incident(reset_toggle):
+    """Manage the Days without Incident counter."""
+    try:
+        if not os.path.exists(DAYS_WITHOUT_INCIDENT_FILE):
+            data = {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
+        else:
+            with open(DAYS_WITHOUT_INCIDENT_FILE, "r") as f:
+                data = json.load(f)
+
+        last_date = datetime.strptime(data["last_date"], "%Y-%m-%d").date()
+        today = datetime.now().date()
+
+        if reset_toggle:
+            new_value = 0
+            logging.info("Days without Incident reset to 0.")
+        else:
+            days_passed = (today - last_date).days
+            new_value = data["counter"] + days_passed if days_passed > 0 else data["counter"]
+
+        data["counter"] = new_value
+        data["last_date"] = today.strftime("%Y-%m-%d")
+
+        with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
+            json.dump(data, f)
+
+        logging.info(f"Days without Incident updated to {new_value}.")
+        return new_value
+
+    except Exception as e:
+        logging.error(f"Error managing Days without Incident: {e}")
+        return 0
+
+
+def extend_date_row(sheet, start_column):
+    """Extend the date row in the Excel sheet to include dates up to today."""
+    try:
+        today = datetime.now().date()
+        
+        # Find the last populated column in the date row
+        last_date = None
+        last_column = start_column - 1
+        for col in range(start_column, sheet.max_column + 1):
+            cell_value = sheet.cell(row=1, column=col).value
+            if cell_value and isinstance(cell_value, str):
+                try:
+                    last_date = datetime.strptime(cell_value, "%m/%d/%Y").date()
+                    last_column = col
+                except ValueError:
+                    continue
+
+        # If no date is found, start from January 1 of the current year
+        if not last_date:
+            last_date = datetime(today.year, 1, 1).date()
+
+        # Extend the dates starting from the day after the last date
+        next_date = last_date + timedelta(days=1)
+        current_column = last_column + 1
+
+        while next_date <= today:
+            sheet.cell(row=1, column=current_column, value=next_date.strftime("%m/%d/%Y"))
+            logging.info(f"Added date {next_date.strftime('%m/%d/%Y')} to column {current_column}.")
+            next_date += timedelta(days=1)
+            current_column += 1
+
+    except Exception as e:
+        logging.error(f"Error extending date row: {e}")
+
 
 
 class DataEntryApp(tk.Tk):
@@ -42,11 +120,7 @@ class DataEntryApp(tk.Tk):
         self.field_to_sheet_mapping = {}  # Maps fields to sheets and cell locations
         self.date_selection = tk.StringVar()
 
-
-        # Attempt to auto-load the last file
         self.auto_load_last_file()
-
-        # Initialize UI
         self.create_ui()
 
     def auto_load_last_file(self):
@@ -58,37 +132,33 @@ class DataEntryApp(tk.Tk):
                 self.file_path = last_file
                 self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
 
-                # Check for Recognitions sheet
                 if "Recognitions" in self.sheet_mapping:
                     self.recognition_manager = RecognitionEntryManager(self.workbook)
-                print(f"Auto-loaded file: {last_file}")
+
+                logging.info(f"Auto-loaded file: {last_file}")
             except Exception as e:
-                print(f"Failed to auto-load file: {e}")
-                tk.messagebox.showerror("Error", f"Failed to auto-load file: {e}")
+                logging.error(f"Failed to auto-load file: {e}")
+                messagebox.showerror("Error", f"Failed to auto-load file: {e}")
 
     def adjust_window_size(self):
         """Adjust the window size based on the content."""
-        self.update_idletasks()  # Ensure all geometry calculations are updated
-        width = self.notebook.winfo_reqwidth() + 20  # Add padding
+        self.update_idletasks()
+        width = self.notebook.winfo_reqwidth() + 20
         height = self.notebook.winfo_reqheight() + 20
         self.geometry(f"{width}x{height}")
 
     def create_ui(self):
         """Create the main UI."""
-        # File selection button
         file_button = ttk.Button(self, text="Open Excel File", command=self.load_excel_file)
-        file_button.pack(pady=5)  # Reduce padding to tighten layout
+        file_button.pack(pady=5)
 
-        # Create a container for the scrollable area
         container = ttk.Frame(self)
-        container.pack(fill="both", expand=True, padx=5, pady=5)  # Adjust padding here
+        container.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Create canvas and scrollbar
         canvas = tk.Canvas(container)
         scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
 
-        # Configure the canvas and scrollbar
         scrollable_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
@@ -96,30 +166,23 @@ class DataEntryApp(tk.Tk):
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
-        # Pack the canvas and scrollbar
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # Enable mouse wheel scrolling
         def on_mouse_wheel(event):
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        canvas.bind_all("<MouseWheel>", on_mouse_wheel)  # Windows/Linux
-        canvas.bind_all("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))  # macOS scroll up
-        canvas.bind_all("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))   # macOS scroll down
+        canvas.bind_all("<MouseWheel>", on_mouse_wheel)
 
-        # Add a Notebook for tabs inside the scrollable frame
         self.notebook = ttk.Notebook(scrollable_frame)
-        self.notebook.pack(fill="both", expand=True, padx=5, pady=5)  # Adjust padding here
+        self.notebook.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Tabs for Sheet 1 and Recognition Entry
         self.sheet1_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.sheet1_frame, text="Sheet 1")
 
         self.recognition_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.recognition_frame, text="Recognition Entry")
 
-        # Define field mappings
         self.field_to_sheet_mapping = {
             "Days without Incident": ("Data", (2, 3)),
             "Haz ID's": ("Data", (3, 3)),
@@ -140,7 +203,6 @@ class DataEntryApp(tk.Tk):
             "Project's": ("Data", (18, 3)),
         }
 
-        # Define recognition fields separately
         self.recognition_fields = {
             "First Name": tk.StringVar(),
             "Last Name": tk.StringVar(),
@@ -148,212 +210,151 @@ class DataEntryApp(tk.Tk):
             "Date": tk.StringVar(),
         }
 
-        # Initialize fields
         self.fields = {field: tk.StringVar() for field in self.field_to_sheet_mapping.keys()}
 
-        # Add a LabelFrame for Sheet 1 fields
         sheet1_group = ttk.LabelFrame(self.sheet1_frame, text="Data Fields", padding=(10, 10))
-        sheet1_group.pack(fill="both", expand=True, padx=5, pady=5)  # Adjust padding here
+        sheet1_group.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Add a DateEntry for selecting the date
         self.date_selection = tk.StringVar()
         date_picker = DateEntry(sheet1_group, textvariable=self.date_selection, width=20,
                                 date_pattern="MM/dd/yyyy", background='darkblue', foreground='white', borderwidth=2)
         date_picker.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
         ttk.Label(sheet1_group, text="Select Date:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
-        # Toggle for Days without Incident
         self.reset_days_toggle = tk.BooleanVar(value=False)
         reset_button = ttk.Checkbutton(sheet1_group, text="Reset Days", variable=self.reset_days_toggle)
         reset_button.grid(row=1, column=2, padx=10, pady=5, sticky="ew")
 
-        # Populate the Days without Incident field on load
-        days_without_incident = self.manage_days_without_incident()
+        # Populate the Days without Incident field on UI load
+        days_without_incident = manage_days_without_incident(self.reset_days_toggle.get())
         self.fields["Days without Incident"].set(days_without_incident)
 
-        # Add fields to the LabelFrame
-        for idx, (label, var) in enumerate(self.fields.items(), start=1):  # Start after the date picker
+        for idx, (label, var) in enumerate(self.fields.items(), start=1):
             ttk.Label(sheet1_group, text=label).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
             ttk.Entry(sheet1_group, textvariable=var).grid(row=idx, column=1, padx=10, pady=5, sticky="ew")
-            sheet1_group.columnconfigure(1, weight=1)
 
-        # Add fields to the Recognition Entry tab
         self.add_fields(self.recognition_frame, self.recognition_fields)
 
-        # Add Save Data button at the bottom
         save_button = ttk.Button(scrollable_frame, text="Save Data", command=self.save_data)
         save_button.pack(pady=10)
 
-        # Bind the Enter key to the Save Data button
         save_button.bind("<Return>", lambda event: self.save_data())
 
-        # Adjust window size dynamically after UI is created
         self.adjust_window_size()
 
     def add_fields(self, frame, fields):
-        """Add labeled input fields for a given set of fields."""
         for idx, (field_name, var) in enumerate(fields.items()):
             ttk.Label(frame, text=field_name).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
             ttk.Entry(frame, textvariable=var).grid(row=idx, column=1, padx=10, pady=5, sticky="ew")
-            frame.columnconfigure(1, weight=1)
-
-    def manage_days_without_incident(self):
-        """Manage the Days without Incident counter."""
-        # Load the current counter and last update date
-        config_file = "days_without_incident.json"
-        if not os.path.exists(config_file):
-            data = {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
-        else:
-            with open(config_file, "r") as f:
-                data = json.load(f)
-
-        # Parse the last date and calculate days passed
-        last_date = datetime.strptime(data["last_date"], "%Y-%m-%d").date()
-        today = datetime.now().date()
-
-        # Fetch the current value from the Excel sheet if available
-        data_sheet = self.sheet_mapping.get("Data")
-        if data_sheet:
-            previous_value_cell = data_sheet.cell(row=2, column=2)  # Example location
-            if previous_value_cell.value and isinstance(previous_value_cell.value, (int, float)):
-                previous_value = int(previous_value_cell.value)
-            else:
-                previous_value = 0
-        else:
-            previous_value = data["counter"]
-
-        # Determine the new value
-        if self.reset_days_toggle.get():
-            # Reset the counter to 0 if toggle is selected
-            new_value = 0
-            print("Resetting Days without Incident to 0.")
-        else:
-            days_passed = (today - last_date).days
-            new_value = previous_value + days_passed if days_passed > 0 else previous_value
-
-        # Save the updated counter and last date
-        data["counter"] = new_value
-        data["last_date"] = today.strftime("%Y-%m-%d")
-        with open(config_file, "w") as f:
-            json.dump(data, f)
-
-        print(f"Days without Incident: {new_value} (Last updated: {data['last_date']})")
-        return new_value
 
     def load_excel_file(self):
-        """Load the Excel file and remember its path."""
         file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
         if file_path:
             try:
                 self.workbook = load_workbook(file_path)
-                self.file_path = file_path  # Store the selected file path
-                save_last_file_path(file_path)  # Save the file path for future use
+                self.file_path = file_path
+                save_last_file_path(file_path)
                 self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
 
                 if "Recognitions" in self.sheet_mapping:
-                    print("Initializing RecognitionEntryManager...")
                     self.recognition_manager = RecognitionEntryManager(self.workbook)
-                    print("RecognitionEntryManager initialized successfully.")
 
-                print(f"Loaded file: {file_path}")
+                # Extend the date row in the "Data" sheet if needed
+                data_sheet = self.sheet_mapping.get("Data")
+                if data_sheet:
+                    last_date_cell = None
+                    for col in range(2, data_sheet.max_column + 1):
+                        cell_value = data_sheet.cell(row=1, column=col).value
+                        if cell_value and isinstance(cell_value, str):
+                            try:
+                                last_date_cell = datetime.strptime(cell_value, "%m/%d/%Y").date()
+                            except ValueError:
+                                continue
+
+                    if last_date_cell:
+                        extend_date_row(data_sheet, col + 1, last_date_cell + timedelta(days=1))
+
+                logging.info(f"Loaded file: {file_path}")
             except Exception as e:
-                print(f"Error loading Excel file: {e}")
-                tk.messagebox.showerror("Error", f"Failed to load Excel file: {e}")
+                logging.error(f"Error loading Excel file: {e}")
+                messagebox.showerror("Error", f"Failed to load Excel file: {e}")
 
     def save_data(self):
-        """Save data based on the active tab."""
         if not self.workbook:
-            tk.messagebox.showerror("Error", "No workbook loaded.")
+            messagebox.showerror("Error", "No workbook loaded.")
             return
 
         try:
-            # Get the index of the active tab
             active_tab = self.notebook.index(self.notebook.select())
 
             if active_tab == 0:  # Sheet 1 tab
                 selected_date = self.date_selection.get()
                 if not selected_date:
-                    tk.messagebox.showerror("Error", "Please select a date.")
+                    messagebox.showerror("Error", "Please select a date.")
                     return
 
-                # Handle Days without Incident logic
-                days_without_incident = self.manage_days_without_incident()
-                self.fields["Days without Incident"].set(days_without_incident)
+                try:
+                    selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
+                except ValueError as e:
+                    logging.error(f"Invalid date selected: {e}")
+                    messagebox.showerror("Error", f"Invalid date format: {selected_date}")
+                    return
 
                 data_sheet = self.sheet_mapping.get("Data")
                 if not data_sheet:
-                    tk.messagebox.showerror("Error", "Data sheet not found in the workbook.")
+                    messagebox.showerror("Error", "Data sheet not found in the workbook.")
                     return
 
-                # Save the updated Days without Incident value
-                if "Days without Incident" in self.fields:
-                    new_value = self.fields["Days without Incident"].get()
-                    data_sheet.cell(row=2, column=2).value = new_value  # Example location
-                    print(f"Updated Days without Incident to {new_value} in Excel.")
-
-
-                # Find the column corresponding to the selected date
+                # Ensure the selected date exists in the date row
                 date_column = None
                 for col in range(2, data_sheet.max_column + 1):
                     cell_value = data_sheet.cell(row=1, column=col).value
-                    if cell_value and isinstance(cell_value, datetime):
-                        cell_value = cell_value.strftime("%m/%d/%Y")  # Convert datetime to MM/DD/YYYY
-                    if cell_value == selected_date:
-                        date_column = col
-                        break
+                    if cell_value and isinstance(cell_value, str):
+                        try:
+                            cell_date = datetime.strptime(cell_value, "%m/%d/%Y").date()
+                            if cell_date == selected_date:
+                                date_column = col
+                                break
+                        except ValueError:
+                            continue
 
+                # If the date is not found, add it to the next available column
                 if not date_column:
-                    tk.messagebox.showerror("Error", f"Selected date '{selected_date}' not found in the Data sheet.")
-                    return
+                    logging.info(f"Date {selected_date} not found. Adding it to the date row.")
+                    date_column = data_sheet.max_column + 1
+                    data_sheet.cell(row=1, column=date_column, value=selected_date.strftime("%m/%d/%Y"))
 
-                # Handle "Truck Fill %" calculation
-                truck_fill_field = self.fields.get("Truck Fill %")
-                if truck_fill_field:
-                    try:
-                        entered_value = truck_fill_field.get()
-                        # Calculate and format the percentage using the helper function
-                        percentage = calculate_truck_fill_percentage(entered_value)
-                        truck_fill_field.set(percentage)  # Update the field with the formatted percentage
-                        print(f"Calculated Truck Fill %: {percentage}")
-                    except ValueError as e:
-                        tk.messagebox.showerror("Error", str(e))
-                        return
-
-                # Save data to the correct column under the selected date
+                # Save data to the appropriate column
                 for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
-                    value = self.fields[field_name].get()  # Get user input
                     if sheet_name == "Data":
-                        data_sheet.cell(row=row, column=date_column).value = value
-                        print(f"Field '{field_name}' -> Sheet '{sheet_name}', Cell ({row},{date_column}): '{value}'")
+                        value = self.fields[field_name].get()
+                        data_sheet.cell(row=row, column=date_column, value=value)
+                        logging.info(f"Saved '{field_name}' with value '{value}' to column {date_column} for date {selected_date}.")
 
                 # Save the workbook
-                if self.file_path:
-                    try:
-                        save_workbook(self.workbook, self.file_path)
-                        print(f"Workbook saved to {self.file_path}")
-                        tk.messagebox.showinfo("Success", f"Data saved to {self.file_path}!")
-                    except PermissionError:
-                        tk.messagebox.showerror(
-                            "Error",
-                            f"The file {self.file_path} is open in another program. Please close it and try again.",
-                        )
-                    except Exception as e:
-                        tk.messagebox.showerror("Error", f"An unexpected error occurred: {e}")
-                else:
-                    tk.messagebox.showerror("Error", "File path not set.")
+                try:
+                    save_workbook(self.workbook, self.file_path)
+                    logging.info("Workbook saved successfully.")
+                    messagebox.showinfo("Success", "Data saved successfully!")
+                except Exception as e:
+                    logging.error(f"Error saving workbook: {e}")
+                    messagebox.showerror("Error", f"Failed to save workbook: {e}")
 
             elif active_tab == 1:  # Recognition Entry tab
-                if hasattr(self, "recognition_manager") and self.recognition_manager:
+                if hasattr(self, "recognition_manager"):
                     recognition_data = {k: v.get() for k, v in self.recognition_fields.items()}
                     self.recognition_manager.add_recognition(recognition_data, self.file_path)
-                    print(f"Recognition data saved: {recognition_data}")
-                    tk.messagebox.showinfo("Success", "Recognition data saved successfully!")
+                    logging.info(f"Recognition data saved: {recognition_data}")
+                    messagebox.showinfo("Success", "Recognition data saved successfully!")
                 else:
-                    tk.messagebox.showerror("Error", "Recognition manager not initialized. Please load a valid Excel file.")
+                    logging.error("Recognition manager not initialized.")
+                    messagebox.showerror("Error", "Recognition manager not initialized.")
 
         except Exception as e:
-            print(f"Error saving data: {e}")
-            tk.messagebox.showerror("Error", f"Failed to save data: {e}")
+            logging.error(f"Error saving data: {e}")
+            messagebox.showerror("Error", f"Failed to save data: {e}")
+
+
 
 
 if __name__ == "__main__":

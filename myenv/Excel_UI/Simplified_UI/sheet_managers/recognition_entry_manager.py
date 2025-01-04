@@ -3,7 +3,8 @@ import logging
 import os
 
 # Configure logging for this module
-log_file_path = os.path.join(os.getcwd(), "error.log")  # Log file in the app's directory
+# Log file in the app's directory
+log_file_path = os.path.join(os.getcwd(), "error.log")
 logging.basicConfig(
     filename=log_file_path,
     level=logging.ERROR,
@@ -11,10 +12,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 class RecognitionEntryManager:
     def __init__(self, workbook):
         self.workbook = workbook
-        self.sheet = get_sheet(workbook, "Recognitions")  # Ensure the correct sheet name is used
+        # Ensure the correct sheet name is used
+        self.sheet = get_sheet(workbook, "Recognitions")
 
     def add_recognition(self, recognition, file_path):
         """
@@ -24,7 +27,8 @@ class RecognitionEntryManager:
         """
         try:
             # Validate input
-            required_fields = ["First Name", "Last Name", "Recognition", "Date"]
+            required_fields = ["First Name",
+                               "Last Name", "Recognition", "Date"]
             for field in required_fields:
                 if field not in recognition or not recognition[field]:
                     raise ValueError(f"Missing required field: {field}")
@@ -41,7 +45,8 @@ class RecognitionEntryManager:
             print(f"Successfully added recognition: {recognition}")
 
             # Save the workbook
-            print(f"Saving workbook to {file_path} after adding recognition data...")
+            print(
+                f"Saving workbook to {file_path} after adding recognition data...")
             save_workbook(self.workbook, file_path)
             print(f"Workbook successfully saved to {file_path}")
         except Exception as e:

@@ -1,2 +1,5 @@
 2024-11-25 11:26:20,045 - ERROR - Sheet not found: Recognition Entry
 2024-11-25 11:26:20,045 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2025-01-04 12:57:23,440 - ERROR - Error saving workbook: [Errno 13] Permission denied: 'C:/Users/thomas/Documents/GitHub/Python-1/myenv/Excel_UI/Boxing Tier.xlsx'
+2025-01-04 12:59:38,480 - ERROR - Error calculating Truck Fill %: Invalid input. Please enter a numeric value between 0 and 26.
+2025-01-04 13:00:00,631 - ERROR - Error calculating Truck Fill %: Invalid input. Please enter a numeric value between 0 and 26.
