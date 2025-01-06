@@ -70,38 +70,49 @@ def manage_days_without_incident(reset_toggle):
 
 
 def extend_date_row(sheet, start_column):
-    """Extend the date row in the Excel sheet to include dates up to today."""
+    """Extend the date row in the Excel sheet for missing dates up until today."""
     try:
         today = datetime.now().date()
-        
-        # Find the last populated column in the date row
+        end_of_year = datetime(today.year, 12, 31).date()
+
+        # Find the last populated date in the date row
         last_date = None
         last_column = start_column - 1
         for col in range(start_column, sheet.max_column + 1):
             cell_value = sheet.cell(row=1, column=col).value
-            if cell_value and isinstance(cell_value, str):
-                try:
-                    last_date = datetime.strptime(cell_value, "%m/%d/%Y").date()
-                    last_column = col
-                except ValueError:
-                    continue
+            if cell_value:
+                if isinstance(cell_value, datetime):  # Handle proper datetime values
+                    parsed_date = cell_value.date()
+                elif isinstance(cell_value, str):  # Handle string dates
+                    try:
+                        parsed_date = datetime.strptime(cell_value, "%d-%b").date()
+                    except ValueError:
+                        parsed_date = None
 
-        # If no date is found, start from January 1 of the current year
+                if parsed_date:
+                    last_date = parsed_date
+                    last_column = col
+
+        # If no date is found, initialize with January 1 of the current year
         if not last_date:
             last_date = datetime(today.year, 1, 1).date()
 
-        # Extend the dates starting from the day after the last date
+        # Start extending dates from the day after the last date
         next_date = last_date + timedelta(days=1)
         current_column = last_column + 1
 
+        # Add all missing dates until the current date (don't move on to other tasks until done)
         while next_date <= today:
-            sheet.cell(row=1, column=current_column, value=next_date.strftime("%m/%d/%Y"))
-            logging.info(f"Added date {next_date.strftime('%m/%d/%Y')} to column {current_column}.")
+            cell = sheet.cell(row=1, column=current_column)
+            cell.value = next_date  # Add as datetime object
+            cell.number_format = "dd-mmm"  # Ensure consistent formatting
+            logging.info(f"Added date {next_date.strftime('%d-%b')} to column {current_column}.")
             next_date += timedelta(days=1)
             current_column += 1
 
     except Exception as e:
         logging.error(f"Error extending date row: {e}")
+
 
 
 
@@ -248,6 +259,7 @@ class DataEntryApp(tk.Tk):
             ttk.Entry(frame, textvariable=var).grid(row=idx, column=1, padx=10, pady=5, sticky="ew")
 
     def load_excel_file(self):
+        """Load the Excel file and ensure the date row is updated."""
         file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
         if file_path:
             try:
@@ -259,25 +271,16 @@ class DataEntryApp(tk.Tk):
                 if "Recognitions" in self.sheet_mapping:
                     self.recognition_manager = RecognitionEntryManager(self.workbook)
 
-                # Extend the date row in the "Data" sheet if needed
+                # Extend the date row in the "Data" sheet
                 data_sheet = self.sheet_mapping.get("Data")
                 if data_sheet:
-                    last_date_cell = None
-                    for col in range(2, data_sheet.max_column + 1):
-                        cell_value = data_sheet.cell(row=1, column=col).value
-                        if cell_value and isinstance(cell_value, str):
-                            try:
-                                last_date_cell = datetime.strptime(cell_value, "%m/%d/%Y").date()
-                            except ValueError:
-                                continue
-
-                    if last_date_cell:
-                        extend_date_row(data_sheet, col + 1, last_date_cell + timedelta(days=1))
+                    extend_date_row(data_sheet, start_column=3)
 
                 logging.info(f"Loaded file: {file_path}")
             except Exception as e:
                 logging.error(f"Error loading Excel file: {e}")
                 messagebox.showerror("Error", f"Failed to load Excel file: {e}")
+
 
     def save_data(self):
         if not self.workbook:
@@ -287,6 +290,28 @@ class DataEntryApp(tk.Tk):
         try:
             active_tab = self.notebook.index(self.notebook.select())
 
+            # First, check the date row in the "Data" sheet and add the full year's dates if needed
+            data_sheet = self.sheet_mapping.get("Data")
+            if data_sheet:
+                # Check if the full year is present
+                today = datetime.now().date()
+                start_column = 3  # Dates start from column 3 (C)
+
+                # Check if the current date already exists
+                current_date_column = None
+                for col in range(start_column, data_sheet.max_column + 1):
+                    cell_value = data_sheet.cell(row=1, column=col).value
+                    if cell_value and isinstance(cell_value, datetime):
+                        if cell_value.date() == today:
+                            current_date_column = col
+                            break
+
+                # If current date is not found, add the dates up until today
+                if not current_date_column:
+                    logging.info(f"Current date {today.strftime('%d-%b')} not found. Adding missing dates.")
+                    extend_date_row(data_sheet, start_column)
+
+            # Continue with the original logic after ensuring the date row is complete
             if active_tab == 0:  # Sheet 1 tab
                 selected_date = self.date_selection.get()
                 if not selected_date:
@@ -298,11 +323,6 @@ class DataEntryApp(tk.Tk):
                 except ValueError as e:
                     logging.error(f"Invalid date selected: {e}")
                     messagebox.showerror("Error", f"Invalid date format: {selected_date}")
-                    return
-
-                data_sheet = self.sheet_mapping.get("Data")
-                if not data_sheet:
-                    messagebox.showerror("Error", "Data sheet not found in the workbook.")
                     return
 
                 # Ensure the selected date exists in the date row
@@ -353,6 +373,8 @@ class DataEntryApp(tk.Tk):
         except Exception as e:
             logging.error(f"Error saving data: {e}")
             messagebox.showerror("Error", f"Failed to save data: {e}")
+
+
 
 
 
