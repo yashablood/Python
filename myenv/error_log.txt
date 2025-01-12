@@ -1,0 +1,4 @@
+2025-01-06 07:36:38,749 - ERROR - Failed to find or add date 06-Jan to the date row.
+2025-01-06 07:43:56,107 - ERROR - Date 06-Jan not found after extending date row.
+2025-01-06 07:46:57,162 - ERROR - Date 06-Jan not found after extending date row.
+2025-01-06 08:51:51,928 - ERROR - Truck Fill % calculation error: Invalid input. Please enter a numeric value between 0 and 26.
