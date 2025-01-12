@@ -4,12 +4,8 @@ import os
 import json
 from datetime import datetime
 
-DAYS_WITHOUT_INCIDENT_FILE = None  # Initialize as None
-
-def set_days_without_incident_path(base_path):
-    """Set the path for the Days without Incident JSON file."""
-    global DAYS_WITHOUT_INCIDENT_FILE
-    DAYS_WITHOUT_INCIDENT_FILE = os.path.join(base_path, "days_without_incident.json")
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
+logging.info(f"Resolved CONFIG_FILE path: {CONFIG_FILE}")
 
 # Configure logging
 logging.basicConfig(
@@ -17,7 +13,8 @@ logging.basicConfig(
     level=logging.ERROR,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
-###
+
+
 def extend_date_row(sheet, start_column):
     """Extend the date row in the Excel sheet for missing dates up until today."""
     try:
@@ -70,44 +67,29 @@ def extend_date_row(sheet, start_column):
 
 def save_days_without_incident_data(counter, last_date):
     """Save the Days without Incident data to a JSON file."""
-    if not DAYS_WITHOUT_INCIDENT_FILE:
-        raise ValueError("DAYS_WITHOUT_INCIDENT_FILE is not set.")
     try:
-        data = {"counter": counter, "last_date": last_date.strftime("%Y-%m-%d")}
-        with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
-            json.dump(data, f)
-        logging.info(f"Days without Incident JSON updated: {data}")
+        config = load_config()
+        config["counter"] = counter
+        config["last_date"] = last_date.strftime("%Y-%m-%d")
+        save_config(config)
+        logging.info(f"Days without Incident updated: {config}")
     except Exception as e:
         logging.error(f"Error saving Days without Incident data: {e}")
-        raise
 
 
 def load_days_without_incident_data():
     """Load the Days without Incident data from a JSON file."""
-    if not DAYS_WITHOUT_INCIDENT_FILE:
-        raise ValueError("DAYS_WITHOUT_INCIDENT_FILE is not set.")
-    if not os.path.exists(DAYS_WITHOUT_INCIDENT_FILE):
+    if not CONFIG_FILE:
+        raise ValueError("CONFIG_FILE is not set.")
+    if not os.path.exists(CONFIG_FILE):
         return {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
     try:
-        with open(DAYS_WITHOUT_INCIDENT_FILE, "r") as f:
+        with open(CONFIG_FILE, "r") as f:
             return json.load(f)
     except Exception as e:
         logging.error(f"Error loading Days without Incident data: {e}")
         raise
 
-
-def load_days_without_incident_data():
-    """Load the Days without Incident data from a JSON file."""
-    if not os.path.exists(DAYS_WITHOUT_INCIDENT_FILE):
-        return {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
-    try:
-        with open(DAYS_WITHOUT_INCIDENT_FILE, "r") as f:
-            return json.load(f)
-    except Exception as e:
-        logging.error(f"Error loading Days without Incident data: {e}")
-        raise
-
-###
 
 def find_or_add_date_column(sheet, selected_date, start_column=3):
     """Find or add the column for the selected date."""
@@ -184,6 +166,7 @@ def read_cell(sheet, row, col):
         logging.error(f"Failed to read cell: row={row}, col={col} - {e}")
         raise
 
+
 def find_or_add_date_column(sheet, selected_date, start_column=3):
     """
     Find the column for the selected date in the first row of the sheet.
@@ -216,6 +199,29 @@ def find_or_add_date_column(sheet, selected_date, start_column=3):
     except Exception as e:
         logging.error(f"Error in find_or_add_date_column: {e}")
         raise
+
+
+def load_config():
+    """Load configuration data from the JSON file."""
+    try:
+        if not os.path.exists(CONFIG_FILE):
+            logging.warning(f"Config file not found. Creating a new one at {CONFIG_FILE}.")
+            return {}
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        logging.error(f"Error loading config: {e}")
+        return {}
+
+
+def save_config(data):
+    """Save configuration data to the JSON file."""
+    try:
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(data, f, indent=4)  # Save in a readable format
+        logging.info(f"Config saved to {CONFIG_FILE}")
+    except Exception as e:
+        logging.error(f"Error saving config: {e}")
 
 
 def calculate_truck_fill_percentage(value):

@@ -196,7 +196,7 @@ class DataEntryApp(tk.Tk):
     def manage_days_without_incident(self):
         """Manage the Days without Incident counter."""
         # Load the current counter and last update date
-        config_file = "days_without_incident.json"
+        config_file = "config.json"
         if not os.path.exists(config_file):
             data = {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
         else:

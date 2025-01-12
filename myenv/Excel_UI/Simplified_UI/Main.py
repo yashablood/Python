@@ -5,13 +5,15 @@ from tkcalendar import DateEntry
 from datetime import datetime, timedelta
 from utils.excel_handler import (
     load_workbook, 
-    set_days_without_incident_path,
     save_workbook, 
     calculate_truck_fill_percentage, 
     save_days_without_incident_data, 
     load_days_without_incident_data, 
     extend_date_row, 
     find_or_add_date_column, 
+    load_config,
+    save_config, 
+    CONFIG_FILE
     )
 
 import json
@@ -19,14 +21,9 @@ import os
 import logging
 
 
-DAYS_WITHOUT_INCIDENT_FILE = os.path.join(os.path.dirname(__file__), "days_without_incident.json")
-set_days_without_incident_path(os.path.dirname(__file__))
 
 # Configure logging
 logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-CONFIG_FILE = "config.json"  # File to store the last file path
-
 
 def save_last_file_path(file_path):
     """Save the last selected file path to a configuration file."""
@@ -47,6 +44,34 @@ def load_last_file_path():
     except Exception as e:
         logging.error(f"Failed to load last file path: {e}")
     return None
+
+def save_window_size(self, event=None):
+    """Save the current window size and position to config.json."""
+    try:
+        config = load_config()
+        config["window_geometry"] = self.geometry()  # Save the current size and position
+        save_config(config)
+        logging.info(f"Window size and position saved: {config['window_geometry']}")
+    except Exception as e:
+        logging.error(f"Error saving window size: {e}")
+
+def on_close(self):
+    """Handle cleanup and save configuration on close."""
+    self.save_window_size()
+    self.destroy()  # Close the application
+
+
+def auto_load_last_window_size(self):
+    """Restore the last saved window size and position from config.json."""
+    try:
+        config = load_config()
+        window_geometry = config.get("window_geometry")
+        if window_geometry:
+            self.geometry(window_geometry)
+            logging.info(f"Restored window geometry: {window_geometry}")
+    except Exception as e:
+        logging.error(f"Error loading window size: {e}")
+
 
 def update_days_without_incident(reset_toggle):
     try:
@@ -75,6 +100,11 @@ class DataEntryApp(tk.Tk):
         self.title("Professional Data Entry")
         self.geometry("800x600")
         self.resizable(True, True)
+        self.auto_load_last_window_size()
+        self.bind("<Configure>", self.save_window_size)  # Save size on resize
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+
 
         # Initialize workbook and other attributes
         self.workbook = None
@@ -112,6 +142,16 @@ class DataEntryApp(tk.Tk):
         height = self.notebook.winfo_reqheight() + 20
         self.geometry(f"{width}x{height}")
 
+    def auto_load_last_window_size(self):
+        """Restore the last saved window size and position from config.json."""
+        try:
+            config = load_config()  # Load the configuration from the JSON file
+            window_geometry = config.get("window_geometry")
+            if window_geometry:
+                self.geometry(window_geometry)  # Apply the saved size and position
+                logging.info(f"Restored window geometry: {window_geometry}")
+        except Exception as e:
+            logging.error(f"Error loading window size: {e}")
 
     def update_days_without_incident_live(self, *args):
         """Live update for Days without Incident field."""
@@ -146,19 +186,19 @@ class DataEntryApp(tk.Tk):
         self.create_scrollable_container()
         self.create_tabs()
         self.populate_fields()
+        self.adjust_window_size()
 
     def create_menu(self):
         """Create the file menu."""
         file_button = ttk.Button(self, text="Open Excel File", command=self.load_excel_file)
         file_button.pack(pady=5)
 
-
     def create_scrollable_container(self):
         """Set up the scrollable container."""
         container = ttk.Frame(self)
         container.pack(fill="both", expand=True, padx=5, pady=5)
 
-        self.canvas = tk.Canvas(container)
+        self.canvas = tk.Canvas(container, highlightthickness=0)
         self.scrollbar = ttk.Scrollbar(container, orient="vertical", command=self.canvas.yview)
         self.scrollable_frame = ttk.Frame(self.canvas)
 
@@ -176,12 +216,26 @@ class DataEntryApp(tk.Tk):
         def on_mouse_wheel(event):
             self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        # Bind scrolling events
-        self.canvas.bind_all("<MouseWheel>", on_mouse_wheel)  # For Windows and Linux
-        self.canvas.bind_all("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))  # For macOS scroll up
-        self.canvas.bind_all("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))   # For macOS scroll down
-        
+        # Dynamically adjust the scroll region as the content resizes
+        def update_scroll_region(event=None):
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            # Check if the content fits without scrolling
+            content_width = self.scrollable_frame.winfo_reqwidth()
+            content_height = self.scrollable_frame.winfo_reqheight()
+            window_width = self.winfo_width()
+            window_height = self.winfo_height()
 
+            # Deactivate scrollbar if content fits
+            if content_width <= window_width and content_height <= window_height:
+                self.scrollbar.pack_forget()  # Remove scrollbar
+            else:
+                self.scrollbar.pack(side="right", fill="y")  # Show scrollbar
+                
+            # Bind scrolling events
+            self.canvas.bind_all("<MouseWheel>", on_mouse_wheel)  # For Windows and Linux
+            self.canvas.bind_all("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))  # For macOS scroll up
+            self.canvas.bind_all("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))   # For macOS scroll down
+        
     def create_tabs(self):
         """Create tabs for different sheets."""
         self.notebook = ttk.Notebook(self.scrollable_frame)
@@ -240,7 +294,8 @@ class DataEntryApp(tk.Tk):
         reset_button.grid(row=1, column=2, padx=10, pady=5, sticky="ew")
 
         # Populate the Days without Incident field on UI load
-        days_without_incident = load_days_without_incident_data().get("counter", 0)
+        days_data = load_days_without_incident_data()  # Load data from config.json
+        days_without_incident = days_data.get("counter", 0)
         self.fields["Days without Incident"].set(days_without_incident)
         self.fields["Days without Incident"].trace_add("write", self.update_days_without_incident_live)
 
@@ -257,6 +312,39 @@ class DataEntryApp(tk.Tk):
         save_button.pack(pady=10)
 
         self.add_fields(self.recognition_frame, self.recognition_fields)
+
+    def adjust_window_size(self):
+        """Adjust the window size to fit all components while respecting screen size."""
+        self.update_idletasks()  # Ensure all widgets are laid out and measured
+        content_width = self.winfo_reqwidth()  # Width needed to fit all components
+        content_height = self.winfo_reqheight()  # Height needed to fit all components
+
+        # Get screen dimensions
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+
+        # Ensure the window does not exceed the screen size
+        new_width = min(content_width, screen_width)
+        new_height = min(content_height, screen_height)
+
+        # Set the window size to fit components or the screen size, whichever is smaller
+        self.geometry(f"{new_width}x{new_height}")
+
+    def save_window_size(self, event=None):
+        """Save the current window size and position to config.json."""
+        try:
+            config = load_config()
+            config["window_geometry"] = self.geometry()  # Save the current size and position
+            save_config(config)
+            logging.info(f"Window size and position saved: {config['window_geometry']}")
+        except Exception as e:
+            logging.error(f"Error saving window size: {e}")
+
+    def on_close(self):
+        """Handle cleanup and save configuration on close."""
+        self.save_window_size()
+        self.destroy()  # Close the application
+
 
     def update_truck_fill_percentage(self, event):
         """Automatically calculate and update the Truck Fill % field."""
@@ -292,7 +380,6 @@ class DataEntryApp(tk.Tk):
             except Exception as e:
                 logging.error(f"Error loading Excel file: {e}")
                 messagebox.showerror("Error", f"Failed to load Excel file: {e}")
-
 
     def save_data(self):
         """Save data to the workbook."""
