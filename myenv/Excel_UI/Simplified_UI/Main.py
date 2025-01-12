@@ -12,7 +12,8 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 CONFIG_FILE = "config.json"  # File to store the last file path
-DAYS_WITHOUT_INCIDENT_FILE = "days_without_incident.json"
+DAYS_WITHOUT_INCIDENT_FILE = os.path.abspath("days_without_incident.json")
+#DAYS_WITHOUT_INCIDENT_FILE = "days_without_incident.json"
 
 
 def save_last_file_path(file_path):
@@ -164,30 +165,27 @@ class DataEntryApp(tk.Tk):
     def update_days_without_incident_json(self, event):
         """Update the JSON file with the manually entered 'Days without Incident' value."""
         try:
-            # Log the entry into the function
-            logging.info("update_days_without_incident_json called.")
-
-            # Get the current value from the UI field
             current_value = self.fields["Days without Incident"].get()
-            logging.info(f"Current value entered: {current_value}")
-
-            if current_value.isdigit():  # Ensure the value is numeric
+            if current_value.isdigit():
                 new_counter = int(current_value)
-                logging.info(f"Valid counter value: {new_counter}")
-
-                # Update the JSON file with the new counter and today's date
                 data = {"counter": new_counter, "last_date": datetime.now().strftime("%Y-%m-%d")}
-                with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
-                    json.dump(data, f)
+                
+                # Create the file if it doesn't exist
+                if not os.path.exists(DAYS_WITHOUT_INCIDENT_FILE):
+                    logging.info(f"JSON file not found. Creating new file at: {DAYS_WITHOUT_INCIDENT_FILE}")
+                    with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
+                        json.dump(data, f)
+                else:
+                    with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
+                        json.dump(data, f)
+
                 logging.info(f"Days without Incident JSON updated: Counter = {new_counter}, Last Date = {datetime.now().strftime('%Y-%m-%d')}")
-
             else:
-                logging.warning("Invalid input for 'Days without Incident'. Not updating JSON.")
                 messagebox.showerror("Error", "Invalid input for 'Days without Incident'. Please enter a number.")
-
         except Exception as e:
             logging.error(f"Failed to update Days without Incident JSON: {e}")
             messagebox.showerror("Error", "Failed to update Days without Incident JSON.")
+
 
 
     def create_ui(self):
@@ -331,7 +329,10 @@ class DataEntryApp(tk.Tk):
                     data = {"counter": manual_counter, "last_date": datetime.now().strftime("%Y-%m-%d")}
                     with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
                         json.dump(data, f)
+                    logging.info(f"Updating JSON file at: {DAYS_WITHOUT_INCIDENT_FILE}")
                     logging.info(f"Updated JSON with manually entered Days without Incident: {manual_counter}")
+
+
                 except Exception as e:
                     logging.error(f"Failed to update Days without Incident JSON: {e}")
                     messagebox.showerror("Error", "Failed to update Days without Incident JSON.")

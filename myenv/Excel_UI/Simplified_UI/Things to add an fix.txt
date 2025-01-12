@@ -1,0 +1,5 @@
+THINGS TO ADD OR FIX
+
+The days without incedent field auto populates with the last entered date instead of the correct number.
+
+Start modifying the tier sheets with the boxing log info.
