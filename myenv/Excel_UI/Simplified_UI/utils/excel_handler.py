@@ -4,7 +4,13 @@ import os
 import json
 from datetime import datetime
 
+DAYS_WITHOUT_INCIDENT_FILE = None  # Initialize as None
 
+def set_days_without_incident_path(base_path):
+    """Set the path for the Days without Incident JSON file."""
+    global DAYS_WITHOUT_INCIDENT_FILE
+    DAYS_WITHOUT_INCIDENT_FILE = os.path.join(base_path, "days_without_incident.json")
+    
 # Configure logging
 logging.basicConfig(
     filename="error_log.txt",
@@ -61,18 +67,35 @@ def extend_date_row(sheet, start_column):
     except Exception as e:
         logging.error(f"Error extending date row: {e}")
 
-DAYS_WITHOUT_INCIDENT_FILE = os.path.join(os.path.dirname(__file__), "days_without_incident.json")
+
 
 def save_days_without_incident_data(counter, last_date):
     """Save the Days without Incident data to a JSON file."""
+    if not DAYS_WITHOUT_INCIDENT_FILE:
+        raise ValueError("DAYS_WITHOUT_INCIDENT_FILE is not set.")
     try:
         data = {"counter": counter, "last_date": last_date.strftime("%Y-%m-%d")}
         with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
             json.dump(data, f)
-        logging.info("Days without Incident JSON updated.")
+        logging.info(f"Days without Incident JSON updated: {data}")
     except Exception as e:
         logging.error(f"Error saving Days without Incident data: {e}")
         raise
+
+
+def load_days_without_incident_data():
+    """Load the Days without Incident data from a JSON file."""
+    if not DAYS_WITHOUT_INCIDENT_FILE:
+        raise ValueError("DAYS_WITHOUT_INCIDENT_FILE is not set.")
+    if not os.path.exists(DAYS_WITHOUT_INCIDENT_FILE):
+        return {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
+    try:
+        with open(DAYS_WITHOUT_INCIDENT_FILE, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        logging.error(f"Error loading Days without Incident data: {e}")
+        raise
+
 
 def load_days_without_incident_data():
     """Load the Days without Incident data from a JSON file."""
@@ -86,6 +109,22 @@ def load_days_without_incident_data():
         raise
 
 ###
+
+def find_or_add_date_column(sheet, selected_date, start_column=3):
+    """Find or add the column for the selected date."""
+    try:
+        for col in range(start_column, sheet.max_column + 1):
+            cell_value = sheet.cell(row=1, column=col).value
+            if cell_value and isinstance(cell_value, datetime) and cell_value.date() == selected_date:
+                return col
+        # Add the date if not found
+        new_col = sheet.max_column + 1
+        write_to_cell(sheet, 1, new_col, selected_date)
+        return new_col
+    except Exception as e:
+        logging.error(f"Error finding or adding date column: {e}")
+        raise
+
 
 def load_workbook(file_path):
     """Load an Excel workbook."""

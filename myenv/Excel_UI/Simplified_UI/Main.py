@@ -1,6 +1,13 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from utils.excel_handler import load_workbook, save_workbook, calculate_truck_fill_percentage, save_days_without_incident_data, load_days_without_incident_data
+from utils.excel_handler import (load_workbook, 
+                                 set_days_without_incident_path,
+                                 save_workbook, 
+                                 calculate_truck_fill_percentage, 
+                                 save_days_without_incident_data, 
+                                 load_days_without_incident_data, 
+                                 extend_date_row, 
+                                 )
 from sheet_managers.recognition_entry_manager import RecognitionEntryManager
 from tkcalendar import DateEntry
 from datetime import datetime, timedelta
@@ -8,11 +15,15 @@ import json
 import os
 import logging
 
+
+DAYS_WITHOUT_INCIDENT_FILE = os.path.join(os.path.dirname(__file__), "days_without_incident.json")
+set_days_without_incident_path(os.path.dirname(__file__))
+
 # Configure logging
 logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 CONFIG_FILE = "config.json"  # File to store the last file path
-DAYS_WITHOUT_INCIDENT_FILE = os.path.join(os.path.dirname(__file__), "days_without_incident.json")
+
 
 def save_last_file_path(file_path):
     """Save the last selected file path to a configuration file."""
@@ -34,88 +45,25 @@ def load_last_file_path():
         logging.error(f"Failed to load last file path: {e}")
     return None
 
-
-def manage_days_without_incident(reset_toggle):
-    """Manage the Days without Incident counter."""
+def update_days_without_incident(reset_toggle):
     try:
-        if not os.path.exists(DAYS_WITHOUT_INCIDENT_FILE):
-            data = {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
-        else:
-            with open(DAYS_WITHOUT_INCIDENT_FILE, "r") as f:
-                data = json.load(f)
-
+        data = load_days_without_incident_data()
         last_date = datetime.strptime(data["last_date"], "%Y-%m-%d").date()
         today = datetime.now().date()
 
         if reset_toggle:
-            new_value = 0
+            new_counter = 0
             logging.info("Days without Incident reset to 0.")
         else:
             days_passed = (today - last_date).days
-            new_value = data["counter"] + days_passed if days_passed > 0 else data["counter"]
+            new_counter = data["counter"] + (days_passed if days_passed > 0 else 0)
 
-        data["counter"] = new_value
-        data["last_date"] = today.strftime("%Y-%m-%d")
-
-        with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
-            json.dump(data, f)
-
-        logging.info(f"Days without Incident updated to {new_value}.")
-        return new_value
-
+        save_days_without_incident_data(new_counter, today)
+        logging.info(f"Updated Days without Incident to {new_counter}.")
+        return new_counter
     except Exception as e:
         logging.error(f"Error managing Days without Incident: {e}")
         return 0
-
-
-def extend_date_row(sheet, start_column):
-    """Extend the date row in the Excel sheet for missing dates up until today."""
-    try:
-        today = datetime.now().date()
-
-        # Find the last populated date in the date row
-        last_date = None
-        last_column = start_column - 1
-        for col in range(start_column, sheet.max_column + 1):
-            cell_value = sheet.cell(row=1, column=col).value
-            if cell_value:
-                if isinstance(cell_value, datetime):  # Handle proper datetime values
-                    parsed_date = cell_value.date()
-                elif isinstance(cell_value, str):  # Handle string dates
-                    try:
-                        parsed_date = datetime.strptime(cell_value, "%d-%b").date()
-                    except ValueError:
-                        parsed_date = None
-
-                if parsed_date:
-                    last_date = parsed_date
-                    last_column = col
-
-        # If no date is found, initialize with January 1 of the current year
-        if not last_date:
-            last_date = datetime(today.year, 1, 1).date()
-
-        # Start extending dates from the day after the last date
-        next_date = last_date + timedelta(days=1)
-        current_column = last_column + 1
-
-        # Add all missing dates until the current date
-        while next_date <= today:
-            # Check if the current date already exists in the date row
-            is_duplicate = any(
-                sheet.cell(row=1, column=col).value == next_date
-                for col in range(start_column, sheet.max_column + 1)
-            )
-            if not is_duplicate:
-                cell = sheet.cell(row=1, column=current_column)
-                cell.value = next_date
-                cell.number_format = "dd-mmm"  # Ensure consistent formatting
-                logging.info(f"Added date {next_date.strftime('%d-%b')} to column {current_column}.")
-                current_column += 1
-            next_date += timedelta(days=1)
-
-    except Exception as e:
-        logging.error(f"Error extending date row: {e}")
 
 
 class DataEntryApp(tk.Tk):
@@ -125,6 +73,7 @@ class DataEntryApp(tk.Tk):
         self.geometry("800x600")
         self.resizable(True, True)
 
+        # Initialize workbook and other attributes
         self.workbook = None
         self.file_path = None
         self.sheet_mapping = {}
@@ -289,7 +238,7 @@ class DataEntryApp(tk.Tk):
         reset_button.grid(row=1, column=2, padx=10, pady=5, sticky="ew")
 
         # Populate the Days without Incident field on UI load
-        days_without_incident = manage_days_without_incident(self.reset_days_toggle.get())
+        days_without_incident = update_days_without_incident(self.reset_days_toggle.get())
         self.fields["Days without Incident"].set(days_without_incident)
         self.fields["Days without Incident"].trace_add("write", self.update_days_without_incident_live)
         logging.info("update_days_without_incident_live called.")
@@ -344,105 +293,51 @@ class DataEntryApp(tk.Tk):
             return
 
         try:
-            # Get the manually entered value for "Days without Incident"
-            manual_days_without_incident = self.fields["Days without Incident"].get()
-            if manual_days_without_incident.isdigit():  # Ensure it's a valid number
-                manual_counter = int(manual_days_without_incident)
-
-                # Update the JSON file with the manually entered value
-                try:
-                    data = {"counter": manual_counter, "last_date": datetime.now().strftime("%Y-%m-%d")}
-                    with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
-                        json.dump(data, f)
-                    logging.info(f"Updating JSON file at: {DAYS_WITHOUT_INCIDENT_FILE}")
-                    logging.info(f"Updated JSON with manually entered Days without Incident: {manual_counter}")
-
-
-                except Exception as e:
-                    logging.error(f"Failed to update Days without Incident JSON: {e}")
-                    messagebox.showerror("Error", "Failed to update Days without Incident JSON.")
-
             active_tab = self.notebook.index(self.notebook.select())
+
+            # Update JSON for "Days without Incident"
+            manual_days = self.fields["Days without Incident"].get()
+            if manual_days.isdigit():
+                update_days_without_incident_json(int(manual_days))
 
             # Ensure the date row is complete
             data_sheet = self.sheet_mapping.get("Data")
             if data_sheet:
-                logging.info("Ensuring the date row is complete.")
-                
-                # Call extend_date_row to add missing dates
                 extend_date_row(data_sheet, start_column=3)
 
-                # Save the workbook to ensure changes are applied
+                # Save the workbook
                 save_workbook(self.workbook, self.file_path)
-                logging.info("Workbook saved after extending the date row.")
+                logging.info("Workbook saved successfully.")
 
-                # Reload the workbook to refresh the sheet mapping
-                self.workbook = load_workbook(self.file_path)
-                self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
-                data_sheet = self.sheet_mapping.get("Data")
-
-                # Get the selected date from the UI
+                # Get the selected date
                 selected_date = self.date_selection.get()
                 if not selected_date:
                     messagebox.showerror("Error", "Please select a date.")
                     return
 
-                try:
-                    # Convert the selected date to a datetime object
-                    selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
-                except ValueError as e:
-                    logging.error(f"Invalid date selected: {e}")
-                    messagebox.showerror("Error", f"Invalid date format: {selected_date}")
-                    return
+                selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
+                date_column = self.find_or_add_date_column(data_sheet, selected_date)
 
-                # Find the column corresponding to the selected date
-                date_column = None
-                for col in range(3, data_sheet.max_column + 1):  # Start from column 3
-                    cell_value = data_sheet.cell(row=1, column=col).value
-                    if cell_value and isinstance(cell_value, datetime) and cell_value.date() == selected_date:
-                        date_column = col
-                        break
-
-                # If the date is still not found (which shouldn't happen), raise an error
-                if not date_column:
-                    logging.error(f"Date {selected_date.strftime('%d-%b')} not found after extending date row.")
-                    messagebox.showerror("Error", f"Date {selected_date.strftime('%d-%b')} not found in the date row.")
-                    return
-
-                # Handle Truck Fill % calculation
+                # Update Truck Fill % if provided
                 truck_fill_field = self.fields.get("Truck Fill %")
                 if truck_fill_field:
                     try:
-                        entered_value = truck_fill_field.get()  # Get user input
-                        # Calculate and validate the percentage
+                        entered_value = truck_fill_field.get()
                         percentage = calculate_truck_fill_percentage(entered_value)
-                        truck_fill_field.set(percentage)  # Update the field with the formatted percentage
-                        logging.info(f"Calculated Truck Fill %: {percentage}")
+                        truck_fill_field.set(percentage)
                     except ValueError as e:
-                        logging.error(f"Truck Fill % calculation error: {e}")
+                        logging.error(f"Truck Fill % error: {e}")
                         messagebox.showerror("Error", str(e))
                         return
 
-                # Save data to the appropriate column for the selected date
+                # Save data to the sheet
                 for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
                     if sheet_name == "Data":
-                        value = self.fields[field_name].get()  # Get the value from the UI field
-                        data_sheet.cell(row=row, column=date_column, value=value)
-                        logging.info(f"Updated '{field_name}' with value '{value}' in column {date_column} for date {selected_date}.")
+                        value = self.fields[field_name].get()
+                        write_to_cell(data_sheet, row, date_column, value)
 
-            elif active_tab == 1:  # Recognition Entry tab
-                if hasattr(self, "recognition_manager"):
-                    recognition_data = {k: v.get() for k, v in self.recognition_fields.items()}
-                    self.recognition_manager.add_recognition(recognition_data, self.file_path)
-                    logging.info(f"Recognition data saved: {recognition_data}")
-                    messagebox.showinfo("Success", "Recognition data saved successfully!")
-                else:
-                    logging.error("Recognition manager not initialized.")
-                    messagebox.showerror("Error", "Recognition manager not initialized.")
-
-            # Save the workbook after all changes
             save_workbook(self.workbook, self.file_path)
-            logging.info("Workbook saved successfully.")
+            logging.info("Data saved successfully.")
             messagebox.showinfo("Success", "Data saved successfully!")
 
         except Exception as e:
