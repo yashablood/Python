@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from utils.excel_handler import load_workbook, save_workbook, calculate_truck_fill_percentage
+from utils.excel_handler import load_workbook, save_workbook, calculate_truck_fill_percentage, save_days_without_incident_data, load_days_without_incident_data
 from sheet_managers.recognition_entry_manager import RecognitionEntryManager
 from tkcalendar import DateEntry
 from datetime import datetime, timedelta
@@ -9,12 +9,10 @@ import os
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 CONFIG_FILE = "config.json"  # File to store the last file path
-DAYS_WITHOUT_INCIDENT_FILE = os.path.abspath("days_without_incident.json")
-#DAYS_WITHOUT_INCIDENT_FILE = "days_without_incident.json"
-
+DAYS_WITHOUT_INCIDENT_FILE = os.path.join(os.path.dirname(__file__), "days_without_incident.json")
 
 def save_last_file_path(file_path):
     """Save the last selected file path to a configuration file."""
@@ -162,30 +160,54 @@ class DataEntryApp(tk.Tk):
         height = self.notebook.winfo_reqheight() + 20
         self.geometry(f"{width}x{height}")
 
-    def update_days_without_incident_json(self, event):
-        """Update the JSON file with the manually entered 'Days without Incident' value."""
+    def update_days_without_incident_live(self, *args):
+        """Live update Days without Incident JSON when the field value changes."""
         try:
+            logging.info("update_days_without_incident_live triggered.")
+
+            # Get the current value
             current_value = self.fields["Days without Incident"].get()
-            if current_value.isdigit():
+            logging.info(f"Detected change in 'Days without Incident': {current_value}")
+
+            if current_value.isdigit():  # Validate input
                 new_counter = int(current_value)
                 data = {"counter": new_counter, "last_date": datetime.now().strftime("%Y-%m-%d")}
-                
-                # Create the file if it doesn't exist
-                if not os.path.exists(DAYS_WITHOUT_INCIDENT_FILE):
-                    logging.info(f"JSON file not found. Creating new file at: {DAYS_WITHOUT_INCIDENT_FILE}")
-                    with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
-                        json.dump(data, f)
-                else:
-                    with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
-                        json.dump(data, f)
-
-                logging.info(f"Days without Incident JSON updated: Counter = {new_counter}, Last Date = {datetime.now().strftime('%Y-%m-%d')}")
+                with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
+                    json.dump(data, f)
+                logging.info(f"JSON updated: Counter = {new_counter}, Last Date = {datetime.now().strftime('%Y-%m-%d')}")
             else:
-                messagebox.showerror("Error", "Invalid input for 'Days without Incident'. Please enter a number.")
+                logging.warning("Invalid input for 'Days without Incident'. JSON not updated.")
+
         except Exception as e:
-            logging.error(f"Failed to update Days without Incident JSON: {e}")
+            logging.error(f"Error in live update for 'Days without Incident': {e}")
             messagebox.showerror("Error", "Failed to update Days without Incident JSON.")
 
+
+    def update_days_without_incident_json(self, event):
+        """Triggered when the 'Days without Incident' field loses focus."""
+        logging.info("update_days_without_incident_json called.")
+        print("update_days_without_incident_json triggered.")
+
+        try:
+            # Get the value from the UI field
+            current_value = self.fields["Days without Incident"].get()
+            logging.info(f"FocusOut triggered for 'Days without Incident' with value: {current_value}")
+
+            if current_value.isdigit():  # Validate input
+                new_counter = int(current_value)
+                # Update the JSON file
+                data = {"counter": new_counter, "last_date": datetime.now().strftime("%Y-%m-%d")}
+                with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
+                    json.dump(data, f)
+                logging.info(f"Updated JSON: Counter = {new_counter}, Last Date = {datetime.now().strftime('%Y-%m-%d')}")
+            else:
+                logging.warning("Invalid input for 'Days without Incident'. Clearing the field.")
+                self.fields["Days without Incident"].set("")  # Clear the invalid input
+                messagebox.showerror("Error", "Invalid input for 'Days without Incident'. Please enter a number.")
+
+        except Exception as e:
+            logging.error(f"Error in update_days_without_incident_json: {e}")
+            messagebox.showerror("Error", "Failed to update 'Days without Incident' JSON.")
 
 
     def create_ui(self):
@@ -269,11 +291,14 @@ class DataEntryApp(tk.Tk):
         # Populate the Days without Incident field on UI load
         days_without_incident = manage_days_without_incident(self.reset_days_toggle.get())
         self.fields["Days without Incident"].set(days_without_incident)
+        self.fields["Days without Incident"].trace_add("write", self.update_days_without_incident_live)
+        logging.info("update_days_without_incident_live called.")
+
 
         # Bind live update for "Days without Incident" field
         days_field = ttk.Entry(sheet1_group, textvariable=self.fields["Days without Incident"])
         days_field.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
-        days_field.bind("<FocusOut>", lambda e: print("FocusOut triggered"),  self.update_days_without_incident_json)
+        days_field.bind("<FocusOut>", self.update_days_without_incident_json)  # Bind the method
 
         for idx, (label, var) in enumerate(self.fields.items(), start=1):
             ttk.Label(sheet1_group, text=label).grid(row=idx, column=0, padx=10, pady=5, sticky="w")

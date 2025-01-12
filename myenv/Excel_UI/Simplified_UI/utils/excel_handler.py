@@ -1,5 +1,9 @@
 import openpyxl
 import logging
+import os
+import json
+from datetime import datetime
+
 
 # Configure logging
 logging.basicConfig(
@@ -7,7 +11,81 @@ logging.basicConfig(
     level=logging.ERROR,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
+###
+def extend_date_row(sheet, start_column):
+    """Extend the date row in the Excel sheet for missing dates up until today."""
+    try:
+        today = datetime.now().date()
 
+        # Find the last populated date in the date row
+        last_date = None
+        last_column = start_column - 1
+        for col in range(start_column, sheet.max_column + 1):
+            cell_value = sheet.cell(row=1, column=col).value
+            if cell_value:
+                if isinstance(cell_value, datetime):  # Handle proper datetime values
+                    parsed_date = cell_value.date()
+                elif isinstance(cell_value, str):  # Handle string dates
+                    try:
+                        parsed_date = datetime.strptime(cell_value, "%d-%b").date()
+                    except ValueError:
+                        parsed_date = None
+
+                if parsed_date:
+                    last_date = parsed_date
+                    last_column = col
+
+        # If no date is found, initialize with January 1 of the current year
+        if not last_date:
+            last_date = datetime(today.year, 1, 1).date()
+
+        # Start extending dates from the day after the last date
+        next_date = last_date + timedelta(days=1)
+        current_column = last_column + 1
+
+        # Add all missing dates until the current date
+        while next_date <= today:
+            # Check if the current date already exists in the date row
+            is_duplicate = any(
+                sheet.cell(row=1, column=col).value == next_date
+                for col in range(start_column, sheet.max_column + 1)
+            )
+            if not is_duplicate:
+                cell = sheet.cell(row=1, column=current_column)
+                cell.value = next_date
+                cell.number_format = "dd-mmm"  # Ensure consistent formatting
+                logging.info(f"Added date {next_date.strftime('%d-%b')} to column {current_column}.")
+                current_column += 1
+            next_date += timedelta(days=1)
+
+    except Exception as e:
+        logging.error(f"Error extending date row: {e}")
+
+DAYS_WITHOUT_INCIDENT_FILE = os.path.join(os.path.dirname(__file__), "days_without_incident.json")
+
+def save_days_without_incident_data(counter, last_date):
+    """Save the Days without Incident data to a JSON file."""
+    try:
+        data = {"counter": counter, "last_date": last_date.strftime("%Y-%m-%d")}
+        with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
+            json.dump(data, f)
+        logging.info("Days without Incident JSON updated.")
+    except Exception as e:
+        logging.error(f"Error saving Days without Incident data: {e}")
+        raise
+
+def load_days_without_incident_data():
+    """Load the Days without Incident data from a JSON file."""
+    if not os.path.exists(DAYS_WITHOUT_INCIDENT_FILE):
+        return {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
+    try:
+        with open(DAYS_WITHOUT_INCIDENT_FILE, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        logging.error(f"Error loading Days without Incident data: {e}")
+        raise
+
+###
 
 def load_workbook(file_path):
     """Load an Excel workbook."""
