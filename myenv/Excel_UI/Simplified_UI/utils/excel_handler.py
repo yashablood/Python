@@ -168,38 +168,22 @@ def read_cell(sheet, row, col):
         raise
 
 
-def find_or_add_date_column(sheet, selected_date, start_column=3):
-    """
-    Find the column for the selected date in the first row of the sheet.
-    If the date is not found, add it to the next available column.
-    """
-    try:
-        # Check each column in the first row starting from start_column
-        for col in range(start_column, sheet.max_column + 1):
-            cell_value = sheet.cell(row=1, column=col).value
-            if cell_value:
-                # Handle proper datetime and string-based dates
-                if isinstance(cell_value, datetime) and cell_value.date() == selected_date:
-                    return col
-                elif isinstance(cell_value, str):
-                    try:
-                        parsed_date = datetime.strptime(cell_value, "%d-%b").date()
-                        if parsed_date == selected_date:
-                            return col
-                    except ValueError:
-                        continue  # Ignore invalid date strings
+def find_or_add_date_column(self, sheet, selected_date):
+    """Find the column for the selected date or add it if missing."""
+    for col in range(1, sheet.max_column + 1):
+        cell_value = sheet.cell(row=1, column=col).value
+        if cell_value and isinstance(cell_value, datetime):
+            if cell_value.date() == selected_date:
+                logging.info(f"Found column for date {selected_date}: {col}")
+                return col
 
-        # Add the date to the next available column if not found
-        new_column = sheet.max_column + 1
-        cell = sheet.cell(row=1, column=new_column)
-        cell.value = selected_date
-        cell.number_format = "dd-mmm"  # Format for consistency
-        logging.info(f"Added new date: {selected_date.strftime('%d-%b')} at column {new_column}.")
-        return new_column
+    # Add a new column if the date is not found
+    new_column = sheet.max_column + 1
+    sheet.cell(row=1, column=new_column, value=selected_date)
+    logging.info(f"Added column for date {selected_date}: {new_column}")
+    return new_column
 
-    except Exception as e:
-        logging.error(f"Error in find_or_add_date_column: {e}")
-        raise
+        #cell.number_format = "dd-mmm"  # Format for consistency
 
 
 def load_config():

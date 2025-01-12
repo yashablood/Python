@@ -262,11 +262,12 @@ class DataEntryApp(tk.Tk):
         sheet1_group.pack(fill="both", expand=True, padx=5, pady=5)
 
         # Add date picker for selected date
+        ttk.Label(sheet1_group, text="Select Date:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
         self.date_selection = tk.StringVar()
         date_picker = DateEntry(sheet1_group, textvariable=self.date_selection, width=20,
                                 date_pattern="MM/dd/yyyy", background='darkblue', foreground='white', borderwidth=2)
         date_picker.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
-        ttk.Label(sheet1_group, text="Select Date:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        
 
         # Add reset days toggle
         self.reset_days_toggle = tk.BooleanVar(value=False)
@@ -292,6 +293,18 @@ class DataEntryApp(tk.Tk):
         save_button.pack(pady=10)
 
         self.add_fields(self.recognition_frame, self.recognition_fields)
+
+    def get_selected_date(self):
+        """Retrieve and process the selected date."""
+        try:
+            selected_date = self.date_selection.get()
+            date_obj = datetime.strptime(selected_date, "%m/%d/%Y").date()  # Convert to a datetime object
+            logging.info(f"Selected date: {date_obj}")
+            return date_obj
+        except ValueError as e:
+            logging.error(f"Invalid date format selected: {e}")
+            messagebox.showerror("Error", "Invalid date selected. Please choose a valid date.")
+            return None
 
     def save_window_size(self, event=None):
         """Save the current window size and position to config.json."""
