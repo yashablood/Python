@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
-logging.info(f"Resolved CONFIG_FILE path: {CONFIG_FILE}")
+
 
 # Configure logging
 logging.basicConfig(
@@ -14,6 +14,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
+logging.info(f"Resolved CONFIG_FILE path: {CONFIG_FILE}")
 
 def extend_date_row(sheet, start_column):
     """Extend the date row in the Excel sheet for missing dates up until today."""
@@ -217,11 +218,33 @@ def load_config():
 def save_config(data):
     """Save configuration data to the JSON file."""
     try:
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)  # Ensure the directory exists
         with open(CONFIG_FILE, "w") as f:
             json.dump(data, f, indent=4)  # Save in a readable format
         logging.info(f"Config saved to {CONFIG_FILE}")
     except Exception as e:
         logging.error(f"Error saving config: {e}")
+
+
+def save_last_file_path(file_path):
+    """Save the last selected file path to the configuration file."""
+    try:
+        config = load_config()
+        config["last_file"] = file_path
+        save_config(config)
+        logging.info(f"Saved last file path: {file_path}")
+    except Exception as e:
+        logging.error(f"Failed to save last file path: {e}")
+
+
+def load_last_file_path():
+    """Load the last selected file path from the configuration file."""
+    try:
+        config = load_config()
+        return config.get("last_file")
+    except Exception as e:
+        logging.error(f"Failed to load last file path: {e}")
+        return None
 
 
 def calculate_truck_fill_percentage(value):

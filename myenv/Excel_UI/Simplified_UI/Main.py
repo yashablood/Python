@@ -12,8 +12,9 @@ from utils.excel_handler import (
     extend_date_row, 
     find_or_add_date_column, 
     load_config,
-    save_config, 
-    CONFIG_FILE
+    save_config,
+    save_last_file_path,
+    load_last_file_path
     )
 
 import json
@@ -25,25 +26,6 @@ import logging
 # Configure logging
 logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def save_last_file_path(file_path):
-    """Save the last selected file path to a configuration file."""
-    try:
-        with open(CONFIG_FILE, "w") as f:
-            json.dump({"last_file": file_path}, f)
-    except Exception as e:
-        logging.error(f"Failed to save last file path: {e}")
-
-
-def load_last_file_path():
-    """Load the last selected file path from the configuration file."""
-    try:
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, "r") as f:
-                data = json.load(f)
-                return data.get("last_file")
-    except Exception as e:
-        logging.error(f"Failed to load last file path: {e}")
-    return None
 
 def save_window_size(self, event=None):
     """Save the current window size and position to config.json."""
@@ -98,10 +80,9 @@ class DataEntryApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Professional Data Entry")
-        self.geometry("800x600")
         self.resizable(True, True)
         self.auto_load_last_window_size()
-        self.bind("<Configure>", self.save_window_size)  # Save size on resize
+        #self.bind("<Configure>", self.save_window_size)  # Save size on resize
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
 
@@ -134,13 +115,6 @@ class DataEntryApp(tk.Tk):
             except Exception as e:
                 logging.error(f"Failed to auto-load file: {e}")
                 messagebox.showerror("Error", f"Failed to auto-load file: {e}")
-
-    def adjust_window_size(self):
-        """Adjust the window size based on the content."""
-        self.update_idletasks()
-        width = self.notebook.winfo_reqwidth() + 20
-        height = self.notebook.winfo_reqheight() + 20
-        self.geometry(f"{width}x{height}")
 
     def auto_load_last_window_size(self):
         """Restore the last saved window size and position from config.json."""
@@ -179,19 +153,41 @@ class DataEntryApp(tk.Tk):
         except Exception as e:
             logging.error(f"Error updating Days without Incident JSON: {e}")
 
-
     def create_ui(self):
         """Set up the main UI."""
         self.create_menu()
         self.create_scrollable_container()
         self.create_tabs()
         self.populate_fields()
-        self.adjust_window_size()
 
     def create_menu(self):
-        """Create the file menu."""
-        file_button = ttk.Button(self, text="Open Excel File", command=self.load_excel_file)
-        file_button.pack(pady=5)
+        """Create the file menu with horizontally aligned buttons."""
+        menu_frame = ttk.Frame(self)
+        menu_frame.pack(pady=5, fill="x")
+
+        # Boxing Tier button (read-write)
+        file_button_1 = ttk.Button(menu_frame, text="Boxing Tier", command=self.load_boxing_tier)
+        file_button_1.grid(row=0, column=0, padx=5, pady=5)
+
+        # Boxing Log button (read-only)
+        file_button_2 = ttk.Button(menu_frame, text="Boxing Log", command=self.load_boxing_log)
+        file_button_2.grid(row=0, column=1, padx=5, pady=5)
+
+    def load_boxing_tier(self):
+        """Load the Boxing Tier file in read-write mode."""
+        self.load_excel_file(key="boxing_tier_file", read_only=False)
+
+    def load_boxing_log(self):
+        """Load the Boxing Log file in read-only mode."""
+        self.load_excel_file(key="boxing_log_file", read_only=True)
+
+        # Boxing Tier button (read-write)
+        #file_button_1 = ttk.Button(menu_frame, text="Boxing Tier", command=lambda: self.load_excel_file("boxing_tier_file", read_only=False))
+        #file_button_1.grid(row=0, column=0, padx=5, pady=5)
+
+        # Boxing Log button (read-only)
+        #file_button_2 = ttk.Button(menu_frame, text="Boxing Log", command=lambda: self.load_excel_file("boxing_log_file", read_only=True))
+        #file_button_2.grid(row=0, column=1, padx=5, pady=5)
 
     def create_scrollable_container(self):
         """Set up the scrollable container."""
@@ -215,27 +211,11 @@ class DataEntryApp(tk.Tk):
         # Enable mouse wheel scrolling
         def on_mouse_wheel(event):
             self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-        # Dynamically adjust the scroll region as the content resizes
-        def update_scroll_region(event=None):
-            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-            # Check if the content fits without scrolling
-            content_width = self.scrollable_frame.winfo_reqwidth()
-            content_height = self.scrollable_frame.winfo_reqheight()
-            window_width = self.winfo_width()
-            window_height = self.winfo_height()
-
-            # Deactivate scrollbar if content fits
-            if content_width <= window_width and content_height <= window_height:
-                self.scrollbar.pack_forget()  # Remove scrollbar
-            else:
-                self.scrollbar.pack(side="right", fill="y")  # Show scrollbar
-                
             # Bind scrolling events
-            self.canvas.bind_all("<MouseWheel>", on_mouse_wheel)  # For Windows and Linux
-            self.canvas.bind_all("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))  # For macOS scroll up
-            self.canvas.bind_all("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))   # For macOS scroll down
-        
+        self.canvas.bind_all("<MouseWheel>", on_mouse_wheel)  # For Windows and Linux
+        self.canvas.bind_all("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))  # For macOS scroll up
+        self.canvas.bind_all("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))   # For macOS scroll down
+                
     def create_tabs(self):
         """Create tabs for different sheets."""
         self.notebook = ttk.Notebook(self.scrollable_frame)
@@ -313,23 +293,6 @@ class DataEntryApp(tk.Tk):
 
         self.add_fields(self.recognition_frame, self.recognition_fields)
 
-    def adjust_window_size(self):
-        """Adjust the window size to fit all components while respecting screen size."""
-        self.update_idletasks()  # Ensure all widgets are laid out and measured
-        content_width = self.winfo_reqwidth()  # Width needed to fit all components
-        content_height = self.winfo_reqheight()  # Height needed to fit all components
-
-        # Get screen dimensions
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-
-        # Ensure the window does not exceed the screen size
-        new_width = min(content_width, screen_width)
-        new_height = min(content_height, screen_height)
-
-        # Set the window size to fit components or the screen size, whichever is smaller
-        self.geometry(f"{new_width}x{new_height}")
-
     def save_window_size(self, event=None):
         """Save the current window size and position to config.json."""
         try:
@@ -344,7 +307,6 @@ class DataEntryApp(tk.Tk):
         """Handle cleanup and save configuration on close."""
         self.save_window_size()
         self.destroy()  # Close the application
-
 
     def update_truck_fill_percentage(self, event):
         """Automatically calculate and update the Truck Fill % field."""
@@ -363,23 +325,38 @@ class DataEntryApp(tk.Tk):
             ttk.Label(frame, text=field_name).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
             ttk.Entry(frame, textvariable=var).grid(row=idx, column=1, padx=10, pady=5, sticky="ew")
 
-    def load_excel_file(self):
-        """Load the Excel file and ensure the date row is updated."""
-        file_path = filedialog.askopenfilename(filetypes=[("Excel files", "*.xlsx")])
-        if file_path:
-            try:
-                self.workbook = load_workbook(file_path)
-                self.file_path = file_path
-                save_last_file_path(file_path)
-                self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
+    def load_excel_file(self, key, read_only=False):
+        """Load the specified Excel file in read-only or read-write mode."""
+        try:
+            # Load saved file paths from config.json
+            config = load_config()
+            file_path = config.get(key)
 
-                if "Recognitions" in self.sheet_mapping:
-                    self.recognition_manager = RecognitionEntryManager(self.workbook)
+            if not file_path or not os.path.exists(file_path):
+                # Prompt the user to select a file if the path is not set or the file is missing
+                file_path = filedialog.askopenfilename(
+                    filetypes=[("Excel files", "*.xlsx *.xlsm")]
+                )
+                if not file_path:
+                    return  # User canceled the file dialog
 
-                logging.info(f"Loaded file: {file_path}")
-            except Exception as e:
-                logging.error(f"Error loading Excel file: {e}")
-                messagebox.showerror("Error", f"Failed to load Excel file: {e}")
+                # Save the selected file path to config.json
+                config[key] = file_path
+                save_config(config)
+                logging.info(f"Saved {key} file path: {file_path}")
+
+            # Load the Excel file
+            self.workbook = load_workbook(file_path,)
+            self.file_path = file_path
+            self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
+
+            mode = "Read-Only" if read_only else "Read-Write"
+            logging.info(f"Loaded file: {file_path} ({mode})")
+            messagebox.showinfo("Success", f"Loaded file: {file_path} ({mode})")
+
+        except Exception as e:
+            logging.error(f"Error loading Excel file: {e}")
+            messagebox.showerror("Error", f"Failed to load Excel file: {e}")
 
     def save_data(self):
         """Save data to the workbook."""
@@ -396,6 +373,18 @@ class DataEntryApp(tk.Tk):
 
             selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
             data_sheet = self.sheet_mapping.get("Data")
+
+            if self.file_path and "Boxing Log" in self.file_path:
+                messagebox.showinfo("Read-Only Mode", "Cannot save changes to the Boxing Log file.")
+                return
+
+            try:
+                save_workbook(self.workbook, self.file_path)
+                logging.info("Workbook saved successfully.")
+                messagebox.showinfo("Success", "Data saved successfully!")
+            except Exception as e:
+                logging.error(f"Error saving data: {e}")
+                messagebox.showerror("Error", f"Failed to save data: {e}")
 
             if data_sheet:
                 # Find or add the column for the selected date

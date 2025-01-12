@@ -1,0 +1,12 @@
+2025-01-12 12:27:22,757 - ERROR - Error updating Truck Fill %: Invalid input. Please enter a numeric value between 0 and 26.
+2025-01-12 12:49:15,157 - ERROR - File not found: C:\Users\Puffy Cloud McGee\Documents\Programming\Python\myenv\Boxing Tier.xlsx
+2025-01-12 12:49:15,157 - ERROR - Error loading Excel file: The file C:\Users\Puffy Cloud McGee\Documents\Programming\Python\myenv\Boxing Tier.xlsx does not exist.
+2025-01-12 12:49:22,689 - ERROR - File not found: C:\Users\Puffy Cloud McGee\Documents\Programming\Python\myenv\Boxing Log.xlsx
+2025-01-12 12:49:22,689 - ERROR - Error loading Excel file: The file C:\Users\Puffy Cloud McGee\Documents\Programming\Python\myenv\Boxing Log.xlsx does not exist.
+2025-01-12 13:07:28,029 - ERROR - Error updating Truck Fill %: Invalid input. Please enter a numeric value between 0 and 26.
+2025-01-12 13:07:33,460 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:07:37,598 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:07:39,920 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:13:07,851 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:13:11,645 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:14:32,691 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'

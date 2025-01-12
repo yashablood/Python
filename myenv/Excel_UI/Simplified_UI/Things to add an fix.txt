@@ -1,6 +1,7 @@
 THINGS TO ADD OR FIX
 
-make CONFIG_FILE relate to main.py
+re add the calendar selection
+Make the error log target the utils folder
 The days without incident field auto populates with the last entered date instead of the correct number.
 check to see if I can streamline the save_data function
 Start modifying the tier sheets with the boxing log info.
