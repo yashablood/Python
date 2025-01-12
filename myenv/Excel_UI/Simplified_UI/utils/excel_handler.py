@@ -10,7 +10,7 @@ def set_days_without_incident_path(base_path):
     """Set the path for the Days without Incident JSON file."""
     global DAYS_WITHOUT_INCIDENT_FILE
     DAYS_WITHOUT_INCIDENT_FILE = os.path.join(base_path, "days_without_incident.json")
-    
+
 # Configure logging
 logging.basicConfig(
     filename="error_log.txt",
@@ -66,7 +66,6 @@ def extend_date_row(sheet, start_column):
 
     except Exception as e:
         logging.error(f"Error extending date row: {e}")
-
 
 
 def save_days_without_incident_data(counter, last_date):
@@ -183,6 +182,39 @@ def read_cell(sheet, row, col):
         return sheet.cell(row=row, column=col).value
     except Exception as e:
         logging.error(f"Failed to read cell: row={row}, col={col} - {e}")
+        raise
+
+def find_or_add_date_column(sheet, selected_date, start_column=3):
+    """
+    Find the column for the selected date in the first row of the sheet.
+    If the date is not found, add it to the next available column.
+    """
+    try:
+        # Check each column in the first row starting from start_column
+        for col in range(start_column, sheet.max_column + 1):
+            cell_value = sheet.cell(row=1, column=col).value
+            if cell_value:
+                # Handle proper datetime and string-based dates
+                if isinstance(cell_value, datetime) and cell_value.date() == selected_date:
+                    return col
+                elif isinstance(cell_value, str):
+                    try:
+                        parsed_date = datetime.strptime(cell_value, "%d-%b").date()
+                        if parsed_date == selected_date:
+                            return col
+                    except ValueError:
+                        continue  # Ignore invalid date strings
+
+        # Add the date to the next available column if not found
+        new_column = sheet.max_column + 1
+        cell = sheet.cell(row=1, column=new_column)
+        cell.value = selected_date
+        cell.number_format = "dd-mmm"  # Format for consistency
+        logging.info(f"Added new date: {selected_date.strftime('%d-%b')} at column {new_column}.")
+        return new_column
+
+    except Exception as e:
+        logging.error(f"Error in find_or_add_date_column: {e}")
         raise
 
 

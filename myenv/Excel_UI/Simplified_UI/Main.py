@@ -1,16 +1,19 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from utils.excel_handler import (load_workbook, 
-                                 set_days_without_incident_path,
-                                 save_workbook, 
-                                 calculate_truck_fill_percentage, 
-                                 save_days_without_incident_data, 
-                                 load_days_without_incident_data, 
-                                 extend_date_row, 
-                                 )
 from sheet_managers.recognition_entry_manager import RecognitionEntryManager
 from tkcalendar import DateEntry
 from datetime import datetime, timedelta
+from utils.excel_handler import (
+    load_workbook, 
+    set_days_without_incident_path,
+    save_workbook, 
+    calculate_truck_fill_percentage, 
+    save_days_without_incident_data, 
+    load_days_without_incident_data, 
+    extend_date_row, 
+    find_or_add_date_column, 
+    )
+
 import json
 import os
 import logging
@@ -109,84 +112,79 @@ class DataEntryApp(tk.Tk):
         height = self.notebook.winfo_reqheight() + 20
         self.geometry(f"{width}x{height}")
 
+
     def update_days_without_incident_live(self, *args):
-        """Live update Days without Incident JSON when the field value changes."""
+        """Live update for Days without Incident field."""
         try:
-            logging.info("update_days_without_incident_live triggered.")
-
-            # Get the current value
             current_value = self.fields["Days without Incident"].get()
-            logging.info(f"Detected change in 'Days without Incident': {current_value}")
-
-            if current_value.isdigit():  # Validate input
+            if current_value.isdigit():
                 new_counter = int(current_value)
-                data = {"counter": new_counter, "last_date": datetime.now().strftime("%Y-%m-%d")}
-                with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
-                    json.dump(data, f)
-                logging.info(f"JSON updated: Counter = {new_counter}, Last Date = {datetime.now().strftime('%Y-%m-%d')}")
+                save_days_without_incident_data(new_counter, datetime.now())
+                logging.info(f"Updated Days without Incident to {new_counter}.")
             else:
-                logging.warning("Invalid input for 'Days without Incident'. JSON not updated.")
-
+                logging.warning("Invalid input for Days without Incident.")
         except Exception as e:
-            logging.error(f"Error in live update for 'Days without Incident': {e}")
-            messagebox.showerror("Error", "Failed to update Days without Incident JSON.")
-
+            logging.error(f"Error in live update for Days without Incident: {e}")
 
     def update_days_without_incident_json(self, event):
-        """Triggered when the 'Days without Incident' field loses focus."""
-        logging.info("update_days_without_incident_json called.")
-        print("update_days_without_incident_json triggered.")
-
+        """Update JSON when Days without Incident loses focus."""
         try:
-            # Get the value from the UI field
             current_value = self.fields["Days without Incident"].get()
-            logging.info(f"FocusOut triggered for 'Days without Incident' with value: {current_value}")
-
-            if current_value.isdigit():  # Validate input
-                new_counter = int(current_value)
-                # Update the JSON file
-                data = {"counter": new_counter, "last_date": datetime.now().strftime("%Y-%m-%d")}
-                with open(DAYS_WITHOUT_INCIDENT_FILE, "w") as f:
-                    json.dump(data, f)
-                logging.info(f"Updated JSON: Counter = {new_counter}, Last Date = {datetime.now().strftime('%Y-%m-%d')}")
+            if current_value.isdigit():
+                save_days_without_incident_data(int(current_value), datetime.now())
+                logging.info("Days without Incident JSON updated.")
             else:
-                logging.warning("Invalid input for 'Days without Incident'. Clearing the field.")
-                self.fields["Days without Incident"].set("")  # Clear the invalid input
-                messagebox.showerror("Error", "Invalid input for 'Days without Incident'. Please enter a number.")
-
+                logging.warning("Invalid input. Clearing Days without Incident field.")
+                self.fields["Days without Incident"].set("")
         except Exception as e:
-            logging.error(f"Error in update_days_without_incident_json: {e}")
-            messagebox.showerror("Error", "Failed to update 'Days without Incident' JSON.")
+            logging.error(f"Error updating Days without Incident JSON: {e}")
 
 
     def create_ui(self):
-        """Create the main UI."""
+        """Set up the main UI."""
+        self.create_menu()
+        self.create_scrollable_container()
+        self.create_tabs()
+        self.populate_fields()
+
+    def create_menu(self):
+        """Create the file menu."""
         file_button = ttk.Button(self, text="Open Excel File", command=self.load_excel_file)
         file_button.pack(pady=5)
 
+
+    def create_scrollable_container(self):
+        """Set up the scrollable container."""
         container = ttk.Frame(self)
         container.pack(fill="both", expand=True, padx=5, pady=5)
 
-        canvas = tk.Canvas(container)
-        scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
+        self.canvas = tk.Canvas(container)
+        self.scrollbar = ttk.Scrollbar(container, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas)
 
-        scrollable_frame.bind(
+        self.scrollable_frame.bind(
             "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         )
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
 
+        # Enable mouse wheel scrolling
         def on_mouse_wheel(event):
-            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        canvas.bind_all("<MouseWheel>", on_mouse_wheel)
+        # Bind scrolling events
+        self.canvas.bind_all("<MouseWheel>", on_mouse_wheel)  # For Windows and Linux
+        self.canvas.bind_all("<Button-4>", lambda e: self.canvas.yview_scroll(-1, "units"))  # For macOS scroll up
+        self.canvas.bind_all("<Button-5>", lambda e: self.canvas.yview_scroll(1, "units"))   # For macOS scroll down
+        
 
-        self.notebook = ttk.Notebook(scrollable_frame)
+    def create_tabs(self):
+        """Create tabs for different sheets."""
+        self.notebook = ttk.Notebook(self.scrollable_frame)
         self.notebook.pack(fill="both", expand=True, padx=5, pady=5)
 
         self.sheet1_frame = ttk.Frame(self.notebook)
@@ -195,6 +193,8 @@ class DataEntryApp(tk.Tk):
         self.recognition_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.recognition_frame, text="Recognition Entry")
 
+    def populate_fields(self):
+        """Add fields to the Sheet 1 tab."""
         self.field_to_sheet_mapping = {
             "Days without Incident": ("Data", (2, 3)),
             "Haz ID's": ("Data", (3, 3)),
@@ -227,40 +227,48 @@ class DataEntryApp(tk.Tk):
         sheet1_group = ttk.LabelFrame(self.sheet1_frame, text="Data Fields", padding=(10, 10))
         sheet1_group.pack(fill="both", expand=True, padx=5, pady=5)
 
+        # Add date picker for selected date
         self.date_selection = tk.StringVar()
         date_picker = DateEntry(sheet1_group, textvariable=self.date_selection, width=20,
                                 date_pattern="MM/dd/yyyy", background='darkblue', foreground='white', borderwidth=2)
         date_picker.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
         ttk.Label(sheet1_group, text="Select Date:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
 
+        # Add reset days toggle
         self.reset_days_toggle = tk.BooleanVar(value=False)
         reset_button = ttk.Checkbutton(sheet1_group, text="Reset Days", variable=self.reset_days_toggle)
         reset_button.grid(row=1, column=2, padx=10, pady=5, sticky="ew")
 
         # Populate the Days without Incident field on UI load
-        days_without_incident = update_days_without_incident(self.reset_days_toggle.get())
+        days_without_incident = load_days_without_incident_data().get("counter", 0)
         self.fields["Days without Incident"].set(days_without_incident)
         self.fields["Days without Incident"].trace_add("write", self.update_days_without_incident_live)
-        logging.info("update_days_without_incident_live called.")
 
-
-        # Bind live update for "Days without Incident" field
-        days_field = ttk.Entry(sheet1_group, textvariable=self.fields["Days without Incident"])
-        days_field.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
-        days_field.bind("<FocusOut>", self.update_days_without_incident_json)  # Bind the method
-
-        for idx, (label, var) in enumerate(self.fields.items(), start=1):
+        for idx, (label, var) in enumerate(self.fields.items()): 
             ttk.Label(sheet1_group, text=label).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
-            ttk.Entry(sheet1_group, textvariable=var).grid(row=idx, column=1, padx=10, pady=5, sticky="ew")
+            entry = ttk.Entry(sheet1_group, textvariable=var)
+            entry.grid(row=idx, column=1, padx=10, pady=5, sticky="ew")    
+
+            # Bind the Truck Fill % field to auto-calculate the percentage
+            if label == "Truck Fill %":
+                entry.bind("<FocusOut>", self.update_truck_fill_percentage)
+
+        save_button = ttk.Button(self.scrollable_frame, text="Save Data", command=self.save_data)
+        save_button.pack(pady=10)
 
         self.add_fields(self.recognition_frame, self.recognition_fields)
 
-        save_button = ttk.Button(scrollable_frame, text="Save Data", command=self.save_data)
-        save_button.pack(pady=10)
-
-        save_button.bind("<Return>", lambda event: self.save_data())
-
-        self.adjust_window_size()
+    def update_truck_fill_percentage(self, event):
+        """Automatically calculate and update the Truck Fill % field."""
+        try:
+            truck_fill_value = self.fields["Truck Fill %"].get()
+            if truck_fill_value:
+                percentage = calculate_truck_fill_percentage(truck_fill_value)
+                self.fields["Truck Fill %"].set(percentage)  # Update the field with the calculated percentage
+                logging.info(f"Updated Truck Fill % to {percentage}")
+        except ValueError as e:
+            logging.error(f"Error updating Truck Fill %: {e}")
+            messagebox.showerror("Error", "Invalid input for Truck Fill %. Please enter a numeric value between 0 and 26.")
 
     def add_fields(self, frame, fields):
         for idx, (field_name, var) in enumerate(fields.items()):
@@ -293,56 +301,50 @@ class DataEntryApp(tk.Tk):
             return
 
         try:
-            active_tab = self.notebook.index(self.notebook.select())
+            # Get the selected date
+            selected_date = self.date_selection.get()
+            if not selected_date:
+                messagebox.showerror("Error", "Please select a date.")
+                return
 
-            # Update JSON for "Days without Incident"
-            manual_days = self.fields["Days without Incident"].get()
-            if manual_days.isdigit():
-                update_days_without_incident_json(int(manual_days))
-
-            # Ensure the date row is complete
+            selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
             data_sheet = self.sheet_mapping.get("Data")
+
             if data_sheet:
-                extend_date_row(data_sheet, start_column=3)
+                # Find or add the column for the selected date
+                date_column = find_or_add_date_column(data_sheet, selected_date, start_column=3)
+
+                # Save field data to the Excel sheet
+                for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
+                    if sheet_name == "Data":
+                        value = self.fields[field_name].get()
+
+                        # Handle Truck Fill % separately
+                        if field_name == "Truck Fill %":
+                            try:
+                                # Strip '%' if present and convert to numeric
+                                if "%" in value:
+                                    value = float(value.strip('%')) / 100 * 26
+                                # Recalculate percentage for consistency
+                                value = calculate_truck_fill_percentage(value)
+                            except ValueError as e:
+                                logging.error(f"Error saving Truck Fill %: {e}")
+                                messagebox.showerror("Error", "Invalid Truck Fill % value. Please correct it.")
+                                return
+
+                        # Write the value to the Excel sheet
+                        data_sheet.cell(row=row, column=date_column).value = value
+                        logging.info(f"Saved '{field_name}' with value '{value}' to column {date_column}.")
 
                 # Save the workbook
                 save_workbook(self.workbook, self.file_path)
                 logging.info("Workbook saved successfully.")
-
-                # Get the selected date
-                selected_date = self.date_selection.get()
-                if not selected_date:
-                    messagebox.showerror("Error", "Please select a date.")
-                    return
-
-                selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
-                date_column = self.find_or_add_date_column(data_sheet, selected_date)
-
-                # Update Truck Fill % if provided
-                truck_fill_field = self.fields.get("Truck Fill %")
-                if truck_fill_field:
-                    try:
-                        entered_value = truck_fill_field.get()
-                        percentage = calculate_truck_fill_percentage(entered_value)
-                        truck_fill_field.set(percentage)
-                    except ValueError as e:
-                        logging.error(f"Truck Fill % error: {e}")
-                        messagebox.showerror("Error", str(e))
-                        return
-
-                # Save data to the sheet
-                for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
-                    if sheet_name == "Data":
-                        value = self.fields[field_name].get()
-                        write_to_cell(data_sheet, row, date_column, value)
-
-            save_workbook(self.workbook, self.file_path)
-            logging.info("Data saved successfully.")
-            messagebox.showinfo("Success", "Data saved successfully!")
+                messagebox.showinfo("Success", "Data saved successfully!")
 
         except Exception as e:
             logging.error(f"Error saving data: {e}")
             messagebox.showerror("Error", f"Failed to save data: {e}")
+
 
 
 if __name__ == "__main__":
