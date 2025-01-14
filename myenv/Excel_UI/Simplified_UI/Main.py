@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from sheet_managers.recognition_entry_manager import RecognitionEntryManager
 from tkcalendar import DateEntry
-from datetime import datetime, timedelta
+from datetime import datetime
 from utils.excel_handler import (
     load_workbook, 
     save_workbook, 
@@ -16,8 +16,6 @@ from utils.excel_handler import (
     save_last_file_path,
     load_last_file_path
     )
-
-import json
 import os
 import logging
 
@@ -42,7 +40,6 @@ def on_close(self):
     self.save_window_size()
     self.destroy()  # Close the application
 
-
 def auto_load_last_window_size(self):
     """Restore the last saved window size and position from config.json."""
     try:
@@ -53,7 +50,6 @@ def auto_load_last_window_size(self):
             logging.info(f"Restored window geometry: {window_geometry}")
     except Exception as e:
         logging.error(f"Error loading window size: {e}")
-
 
 def update_days_without_incident(reset_toggle):
     try:
@@ -74,7 +70,6 @@ def update_days_without_incident(reset_toggle):
     except Exception as e:
         logging.error(f"Error managing Days without Incident: {e}")
         return 0
-
 
 class DataEntryApp(tk.Tk):
     def __init__(self):
@@ -259,11 +254,16 @@ class DataEntryApp(tk.Tk):
         self.fields = {field: tk.StringVar() for field in self.field_to_sheet_mapping.keys()}
 
         sheet1_group = ttk.LabelFrame(self.sheet1_frame, text="Data Fields", padding=(10, 10))
-        sheet1_group.pack(fill="both", expand=True, padx=5, pady=5)
+        sheet1_group.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+
+        # Configure grid column weights to ensure proper resizing
+        sheet1_group.columnconfigure(0, weight=1)
+        sheet1_group.columnconfigure(1, weight=2)
+        sheet1_group.columnconfigure(2, weight=1)
 
         # Add date picker for selected date
         ttk.Label(sheet1_group, text="Select Date:").grid(row=0, column=0, padx=10, pady=5, sticky="w")
-        self.date_selection = tk.StringVar()
+        self.date_selection = tk.StringVar(value=datetime.now().strftime("%m/%d/%Y"))
         date_picker = DateEntry(sheet1_group, textvariable=self.date_selection, width=20,
                                 date_pattern="MM/dd/yyyy", background='darkblue', foreground='white', borderwidth=2)
         date_picker.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
@@ -280,7 +280,7 @@ class DataEntryApp(tk.Tk):
         self.fields["Days without Incident"].set(days_without_incident)
         self.fields["Days without Incident"].trace_add("write", self.update_days_without_incident_live)
 
-        for idx, (label, var) in enumerate(self.fields.items()): 
+        for idx, (label, var) in enumerate(self.fields.items(), start=1):
             ttk.Label(sheet1_group, text=label).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
             entry = ttk.Entry(sheet1_group, textvariable=var)
             entry.grid(row=idx, column=1, padx=10, pady=5, sticky="ew")    
@@ -363,6 +363,10 @@ class DataEntryApp(tk.Tk):
             self.file_path = file_path
             self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
 
+            # Call extend_date_row to ensure the date row is updated
+            if not read_only and "Data" in self.sheet_mapping:
+                extend_date_row(self.sheet_mapping["Data"], start_column=3)
+
             mode = "Read-Only" if read_only else "Read-Write"
             logging.info(f"Loaded file: {file_path} ({mode})")
             messagebox.showinfo("Success", f"Loaded file: {file_path} ({mode})")
@@ -387,22 +391,18 @@ class DataEntryApp(tk.Tk):
             selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
             data_sheet = self.sheet_mapping.get("Data")
 
+            # Prevent saving to the Boxing Log file
             if self.file_path and "Boxing Log" in self.file_path:
                 messagebox.showinfo("Read-Only Mode", "Cannot save changes to the Boxing Log file.")
                 return
 
-            try:
-                save_workbook(self.workbook, self.file_path)
-                logging.info("Workbook saved successfully.")
-                messagebox.showinfo("Success", "Data saved successfully!")
-            except Exception as e:
-                logging.error(f"Error saving data: {e}")
-                messagebox.showerror("Error", f"Failed to save data: {e}")
-
             if data_sheet:
-                # Find or add the column for the selected date
-                date_column = find_or_add_date_column(data_sheet, selected_date, start_column=3)
+                # Extend the date row to include all missing dates
+                extend_date_row(data_sheet, start_column=3)
 
+                # Find or add the column for the selected date
+                date_column = self.find_or_add_date_column(data_sheet, selected_date, start_column=3)
+                
                 # Save field data to the Excel sheet
                 for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
                     if sheet_name == "Data":
@@ -425,10 +425,10 @@ class DataEntryApp(tk.Tk):
                         data_sheet.cell(row=row, column=date_column).value = value
                         logging.info(f"Saved '{field_name}' with value '{value}' to column {date_column}.")
 
-                # Save the workbook
-                save_workbook(self.workbook, self.file_path)
-                logging.info("Workbook saved successfully.")
-                messagebox.showinfo("Success", "Data saved successfully!")
+            # Save the workbook
+            save_workbook(self.workbook, self.file_path)
+            logging.info("Workbook saved successfully.")
+            messagebox.showinfo("Success", "Data saved successfully!")
 
         except Exception as e:
             logging.error(f"Error saving data: {e}")
