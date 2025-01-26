@@ -29,3 +29,9 @@
 2025-01-14 12:37:06,317 - ERROR - Error extending date row: name 'timedelta' is not defined
 2025-01-14 12:37:06,317 - ERROR - Error saving data: '_tkinter.tkapp' object has no attribute 'find_or_add_date_column'
 2025-01-14 13:14:15,580 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-25 19:01:23,222 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-25 19:01:26,653 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-25 19:01:57,112 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-25 19:01:57,112 - ERROR - Error saving data: '_tkinter.tkapp' object has no attribute 'find_or_add_date_column'
+2025-01-25 19:02:16,618 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-25 19:02:16,618 - ERROR - Error saving data: '_tkinter.tkapp' object has no attribute 'find_or_add_date_column'
