@@ -1,0 +1,9 @@
+THINGS TO ADD OR FIX
+
+readd the calendar selection
+lost the inserting of missed dates. need to readd it
+It is saving twice per button press
+Make the error log target the utils folder
+The days without incident field auto populates with the last entered date instead of the correct number.
+check to see if I can streamline the save_data function
+Start modifying the tier sheets with the boxing log info.

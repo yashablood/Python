@@ -1,0 +1,31 @@
+2025-01-12 12:27:22,757 - ERROR - Error updating Truck Fill %: Invalid input. Please enter a numeric value between 0 and 26.
+2025-01-12 12:49:15,157 - ERROR - File not found: C:\Users\Puffy Cloud McGee\Documents\Programming\Python\myenv\Boxing Tier.xlsx
+2025-01-12 12:49:15,157 - ERROR - Error loading Excel file: The file C:\Users\Puffy Cloud McGee\Documents\Programming\Python\myenv\Boxing Tier.xlsx does not exist.
+2025-01-12 12:49:22,689 - ERROR - File not found: C:\Users\Puffy Cloud McGee\Documents\Programming\Python\myenv\Boxing Log.xlsx
+2025-01-12 12:49:22,689 - ERROR - Error loading Excel file: The file C:\Users\Puffy Cloud McGee\Documents\Programming\Python\myenv\Boxing Log.xlsx does not exist.
+2025-01-12 13:07:28,029 - ERROR - Error updating Truck Fill %: Invalid input. Please enter a numeric value between 0 and 26.
+2025-01-12 13:07:33,460 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:07:37,598 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:07:39,920 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:13:07,851 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:13:11,645 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-12 13:14:32,691 - ERROR - Error loading Excel file: load_workbook() got an unexpected keyword argument 'read_only'
+2025-01-14 12:06:45,921 - ERROR - Error saving data: find_or_add_date_column() got an unexpected keyword argument 'start_column'
+2025-01-14 12:08:30,864 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-14 12:08:32,180 - ERROR - Error saving data: find_or_add_date_column() got an unexpected keyword argument 'start_column'
+2025-01-14 12:09:44,890 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-14 12:09:46,355 - ERROR - Error saving data: find_or_add_date_column() got an unexpected keyword argument 'start_column'
+2025-01-14 12:09:57,718 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-14 12:09:59,001 - ERROR - Error saving data: find_or_add_date_column() got an unexpected keyword argument 'start_column'
+2025-01-14 12:27:35,253 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-14 12:27:35,253 - ERROR - Error saving data: find_or_add_date_column() got an unexpected keyword argument 'start_column'
+2025-01-14 12:27:39,562 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-14 12:27:42,134 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-14 12:27:42,134 - ERROR - Error saving data: find_or_add_date_column() got an unexpected keyword argument 'start_column'
+2025-01-14 12:27:59,149 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-14 12:27:59,149 - ERROR - Error saving data: find_or_add_date_column() got an unexpected keyword argument 'start_column'
+2025-01-14 12:34:14,315 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-14 12:34:14,315 - ERROR - Error saving data: find_or_add_date_column() got an unexpected keyword argument 'start_column'
+2025-01-14 12:37:06,317 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-01-14 12:37:06,317 - ERROR - Error saving data: '_tkinter.tkapp' object has no attribute 'find_or_add_date_column'
+2025-01-14 13:14:15,580 - ERROR - Error extending date row: name 'timedelta' is not defined

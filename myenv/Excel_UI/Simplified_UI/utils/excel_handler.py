@@ -1,5 +1,11 @@
 import openpyxl
 import logging
+import os
+import json
+from datetime import datetime
+
+CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
+
 
 # Configure logging
 logging.basicConfig(
@@ -7,6 +13,99 @@ logging.basicConfig(
     level=logging.ERROR,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
+
+logging.info(f"Resolved CONFIG_FILE path: {CONFIG_FILE}")
+
+def extend_date_row(sheet, start_column):
+    """Extend the date row in the Excel sheet for missing dates up until today."""
+    try:
+        today = datetime.now().date()
+
+        # Find the last populated date in the date row
+        last_date = None
+        last_column = start_column - 1
+        for col in range(start_column, sheet.max_column + 1):
+            cell_value = sheet.cell(row=1, column=col).value
+            if cell_value:
+                if isinstance(cell_value, datetime):  # Handle proper datetime values
+                    parsed_date = cell_value.date()
+                elif isinstance(cell_value, str):  # Handle string dates
+                    try:
+                        parsed_date = datetime.strptime(cell_value, "%d-%b").date()
+                    except ValueError:
+                        parsed_date = None
+
+                if parsed_date:
+                    last_date = parsed_date
+                    last_column = col
+
+        # If no date is found, initialize with January 1 of the current year
+        if not last_date:
+            last_date = datetime(today.year, 1, 1).date()
+
+        # Start extending dates from the day after the last date
+        next_date = last_date + timedelta(days=1)
+        current_column = last_column + 1
+
+        # Add all missing dates until the current date
+        while next_date <= today:
+            # Check if the current date already exists in the date row
+            is_duplicate = any(
+                sheet.cell(row=1, column=col).value == next_date
+                for col in range(start_column, sheet.max_column + 1)
+            )
+            if not is_duplicate:
+                cell = sheet.cell(row=1, column=current_column)
+                cell.value = next_date
+                cell.number_format = "dd-mmm"  # Ensure consistent formatting
+                logging.info(f"Added date {next_date.strftime('%d-%b')} to column {current_column}.")
+                current_column += 1
+            next_date += timedelta(days=1)
+
+    except Exception as e:
+        logging.error(f"Error extending date row: {e}")
+
+
+def save_days_without_incident_data(counter, last_date):
+    """Save the Days without Incident data to a JSON file."""
+    try:
+        config = load_config()
+        config["counter"] = counter
+        config["last_date"] = last_date.strftime("%Y-%m-%d")
+        save_config(config)
+        logging.info(f"Days without Incident updated: {config}")
+    except Exception as e:
+        logging.error(f"Error saving Days without Incident data: {e}")
+
+
+def load_days_without_incident_data():
+    """Load the Days without Incident data from a JSON file."""
+    if not CONFIG_FILE:
+        raise ValueError("CONFIG_FILE is not set.")
+    if not os.path.exists(CONFIG_FILE):
+        return {"counter": 0, "last_date": datetime.now().strftime("%Y-%m-%d")}
+    try:
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        logging.error(f"Error loading Days without Incident data: {e}")
+        raise
+
+
+def find_or_add_date_column(sheet, selected_date, start_column=3):
+    """Find or add the column for the selected date."""
+    try:
+        for col in range(start_column, sheet.max_column + 1):
+            cell_value = sheet.cell(row=1, column=col).value
+            if cell_value and isinstance(cell_value, datetime) and cell_value.date() == selected_date:
+                return col
+        # Add the date if not found
+        new_col = sheet.max_column + 1
+        write_to_cell(sheet, 1, new_col, selected_date)
+        return new_col
+    except Exception as e:
+        logging.error(f"Error finding or adding date column: {e}")
+        raise
 
 
 def load_workbook(file_path):
@@ -67,6 +166,73 @@ def read_cell(sheet, row, col):
     except Exception as e:
         logging.error(f"Failed to read cell: row={row}, col={col} - {e}")
         raise
+
+
+def find_or_add_date_column(self, sheet, selected_date, start_column=1):
+
+    try:
+        # Search for the selected date in the date row
+        for col in range(start_column, sheet.max_column + 1):
+            cell_value = sheet.cell(row=1, column=col).value
+            if cell_value and isinstance(cell_value, datetime):
+                if cell_value.date() == selected_date:
+                    logging.info(f"Found column for date {selected_date}: {col}")
+                    return col
+
+        # If not found, add a new column for the date
+        new_column = sheet.max_column + 1
+        sheet.cell(row=1, column=new_column, value=selected_date)
+        sheet.cell(row=1, column=new_column).number_format = "dd-mmm"  # Format for consistency
+        logging.info(f"Added column for date {selected_date}: {new_column}")
+        return new_column
+    except Exception as e:
+        logging.error(f"Error in find_or_add_date_column: {e}")
+        raise
+
+
+def load_config():
+    """Load configuration data from the JSON file."""
+    try:
+        if not os.path.exists(CONFIG_FILE):
+            logging.warning(f"Config file not found. Creating a new one at {CONFIG_FILE}.")
+            return {}
+        with open(CONFIG_FILE, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        logging.error(f"Error loading config: {e}")
+        return {}
+
+
+def save_config(data):
+    """Save configuration data to the JSON file."""
+    try:
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)  # Ensure the directory exists
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(data, f, indent=4)  # Save in a readable format
+        logging.info(f"Config saved to {CONFIG_FILE}")
+    except Exception as e:
+        logging.error(f"Error saving config: {e}")
+
+
+def save_last_file_path(file_path):
+    """Save the last selected file path to the configuration file."""
+    try:
+        config = load_config()
+        config["last_file"] = file_path
+        save_config(config)
+        logging.info(f"Saved last file path: {file_path}")
+    except Exception as e:
+        logging.error(f"Failed to save last file path: {e}")
+
+
+def load_last_file_path():
+    """Load the last selected file path from the configuration file."""
+    try:
+        config = load_config()
+        return config.get("last_file")
+    except Exception as e:
+        logging.error(f"Failed to load last file path: {e}")
+        return None
 
 
 def calculate_truck_fill_percentage(value):
