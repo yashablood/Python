@@ -2,7 +2,7 @@ import openpyxl
 import logging
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
@@ -16,7 +16,7 @@ logging.basicConfig(
 
 logging.info(f"Resolved CONFIG_FILE path: {CONFIG_FILE}")
 
-def extend_date_row(sheet, start_column):
+def extend_date_row(sheet, start_column=3):
     """Extend the date row in the Excel sheet for missing dates up until today."""
     try:
         today = datetime.now().date()
@@ -168,26 +168,26 @@ def read_cell(sheet, row, col):
         raise
 
 
-def find_or_add_date_column(self, sheet, selected_date, start_column=1):
+#def find_or_add_date_column( sheet, selected_date, start_column=1):
 
-    try:
+ #   try:
         # Search for the selected date in the date row
-        for col in range(start_column, sheet.max_column + 1):
-            cell_value = sheet.cell(row=1, column=col).value
-            if cell_value and isinstance(cell_value, datetime):
-                if cell_value.date() == selected_date:
-                    logging.info(f"Found column for date {selected_date}: {col}")
-                    return col
+  #      for col in range(start_column, sheet.max_column + 1):
+  #          cell_value = sheet.cell(row=1, column=col).value
+  #          if cell_value and isinstance(cell_value, datetime):
+  #              if cell_value.date() == selected_date:
+  #                  logging.info(f"Found column for date {selected_date}: {col}")
+  #                  return col
 
         # If not found, add a new column for the date
-        new_column = sheet.max_column + 1
-        sheet.cell(row=1, column=new_column, value=selected_date)
-        sheet.cell(row=1, column=new_column).number_format = "dd-mmm"  # Format for consistency
-        logging.info(f"Added column for date {selected_date}: {new_column}")
-        return new_column
-    except Exception as e:
-        logging.error(f"Error in find_or_add_date_column: {e}")
-        raise
+  #      new_column = sheet.max_column + 1
+  #      sheet.cell(row=1, column=new_column, value=selected_date)
+  #      sheet.cell(row=1, column=new_column).number_format = "dd-mmm"  # Format for consistency
+  #      logging.info(f"Added column for date {selected_date}: {new_column}")
+  #      return new_column
+  #  except Exception as e:
+  #      logging.error(f"Error in find_or_add_date_column: {e}")
+  #      raise
 
 
 def load_config():

@@ -28,3 +28,22 @@
 2024-11-25 11:17:12,676 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
 2024-11-25 11:26:38,711 - ERROR - Sheet not found: Recognition Entry
 2024-11-25 11:26:38,712 - ERROR - Error initializing RecognitionEntryManager: 'The sheet Recognition Entry does not exist in the workbook.'
+2025-02-27 01:24:07,917 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 01:24:14,347 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 01:24:14,347 - ERROR - Error saving data: '_tkinter.tkapp' object has no attribute 'find_or_add_date_column'
+2025-02-27 01:28:24,763 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 01:28:29,064 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 01:28:29,064 - ERROR - Error saving data: find_or_add_date_column() missing 1 required positional argument: 'selected_date'
+2025-02-27 01:28:36,247 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 01:28:36,247 - ERROR - Error saving data: find_or_add_date_column() missing 1 required positional argument: 'selected_date'
+2025-02-27 01:29:47,142 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 01:29:51,566 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 01:29:51,566 - ERROR - Error saving data: find_or_add_date_column() missing 1 required positional argument: 'selected_date'
+2025-02-27 01:30:05,175 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 01:30:05,175 - ERROR - Error saving data: find_or_add_date_column() missing 1 required positional argument: 'selected_date'
+2025-02-27 01:56:40,536 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 01:56:43,863 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 02:02:59,717 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 02:03:02,743 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 02:10:18,429 - ERROR - Error extending date row: name 'timedelta' is not defined
+2025-02-27 02:10:21,242 - ERROR - Error extending date row: name 'timedelta' is not defined

@@ -1,7 +1,7 @@
 THINGS TO ADD OR FIX
 
-readd the calendar selection
-lost the inserting of missed dates. need to readd it
+re-add the calendar selection
+lost the inserting of missed dates. need to re-add it
 It is saving twice per button press
 Make the error log target the utils folder
 The days without incident field auto populates with the last entered date instead of the correct number.
