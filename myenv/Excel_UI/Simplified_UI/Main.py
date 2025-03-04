@@ -364,8 +364,8 @@ class DataEntryApp(tk.Tk):
             self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
 
             # Call extend_date_row to ensure the date row is updated
-            if not read_only and "Data" in self.sheet_mapping:
-                extend_date_row(self.sheet_mapping["Data"], start_column=3)
+            #if not read_only and "Data" in self.sheet_mapping:
+            extend_date_row(self.sheet_mapping["Data"], start_column=3)
 
             mode = "Read-Only" if read_only else "Read-Write"
             logging.info(f"Loaded file: {file_path} ({mode})")
