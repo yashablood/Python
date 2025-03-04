@@ -2,7 +2,8 @@ import openpyxl
 import logging
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
+from tkinter import messagebox
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
@@ -16,8 +17,8 @@ logging.basicConfig(
 
 logging.info(f"Resolved CONFIG_FILE path: {CONFIG_FILE}")
 
-def extend_date_row(sheet, start_column):
-    """Extend the date row in the Excel sheet for missing dates up until today."""
+def extend_date_row(sheet, start_column=3):
+    """Extend the date row in the Excel sheet for missing dates up until today and format it as dd-mmm."""
     try:
         today = datetime.now().date()
 
@@ -31,9 +32,10 @@ def extend_date_row(sheet, start_column):
                     parsed_date = cell_value.date()
                 elif isinstance(cell_value, str):  # Handle string dates
                     try:
-                        parsed_date = datetime.strptime(cell_value, "%d-%b").date()
+                        parsed_date = datetime.strptime(cell_value, "%m/%d/%Y").date()
                     except ValueError:
                         parsed_date = None
+
 
                 if parsed_date:
                     last_date = parsed_date
@@ -57,8 +59,9 @@ def extend_date_row(sheet, start_column):
             if not is_duplicate:
                 cell = sheet.cell(row=1, column=current_column)
                 cell.value = next_date
-                cell.number_format = "dd-mmm"  # Ensure consistent formatting
+                cell.number_format = "DD-MMM"  # Ensure correct display format
                 logging.info(f"Added date {next_date.strftime('%d-%b')} to column {current_column}.")
+
                 current_column += 1
             next_date += timedelta(days=1)
 
@@ -93,19 +96,33 @@ def load_days_without_incident_data():
 
 
 def find_or_add_date_column(sheet, selected_date, start_column=3):
-    """Find or add the column for the selected date."""
+    """Find the column for the selected date without adding a new one."""
     try:
+        selected_date = selected_date.strftime("%d-%b")  # Convert selected date to match Excel format
+
         for col in range(start_column, sheet.max_column + 1):
             cell_value = sheet.cell(row=1, column=col).value
-            if cell_value and isinstance(cell_value, datetime) and cell_value.date() == selected_date:
-                return col
-        # Add the date if not found
-        new_col = sheet.max_column + 1
-        write_to_cell(sheet, 1, new_col, selected_date)
-        return new_col
+            cell_date = None
+
+            if cell_value:
+                if isinstance(cell_value, datetime):
+                    cell_date = cell_value.strftime("%d-%b")  # Convert Excel date to the same format
+                elif isinstance(cell_value, str):
+                    try:
+                        cell_date = datetime.strptime(cell_value, "%d-%b").strftime("%d-%b")
+                    except ValueError:
+                        continue  # Skip invalid date formats
+
+            if cell_date == selected_date:
+                return col  # Return the existing column
+
+        logging.error(f"Date {selected_date} not found in the sheet.")
+        return None  # Return None instead of creating a new column
     except Exception as e:
-        logging.error(f"Error finding or adding date column: {e}")
-        raise
+        logging.error(f"Error finding date column: {e}")
+        return None
+
+
 
 
 def load_workbook(file_path):
@@ -165,28 +182,6 @@ def read_cell(sheet, row, col):
         return sheet.cell(row=row, column=col).value
     except Exception as e:
         logging.error(f"Failed to read cell: row={row}, col={col} - {e}")
-        raise
-
-
-def find_or_add_date_column(self, sheet, selected_date, start_column=1):
-
-    try:
-        # Search for the selected date in the date row
-        for col in range(start_column, sheet.max_column + 1):
-            cell_value = sheet.cell(row=1, column=col).value
-            if cell_value and isinstance(cell_value, datetime):
-                if cell_value.date() == selected_date:
-                    logging.info(f"Found column for date {selected_date}: {col}")
-                    return col
-
-        # If not found, add a new column for the date
-        new_column = sheet.max_column + 1
-        sheet.cell(row=1, column=new_column, value=selected_date)
-        sheet.cell(row=1, column=new_column).number_format = "dd-mmm"  # Format for consistency
-        logging.info(f"Added column for date {selected_date}: {new_column}")
-        return new_column
-    except Exception as e:
-        logging.error(f"Error in find_or_add_date_column: {e}")
         raise
 
 
