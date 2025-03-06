@@ -98,31 +98,32 @@ def load_days_without_incident_data():
 def find_or_add_date_column(sheet, selected_date, start_column=3):
     """Find the column for the selected date without adding a new one."""
     try:
-        selected_date = selected_date.strftime("%d-%b")  # Convert selected date to match Excel format
-
         for col in range(start_column, sheet.max_column + 1):
             cell_value = sheet.cell(row=1, column=col).value
+            
+            # Convert cell_value to a datetime object if possible
             cell_date = None
-
-            if cell_value:
-                if isinstance(cell_value, datetime):
-                    cell_date = cell_value.strftime("%d-%b")  # Convert Excel date to the same format
-                elif isinstance(cell_value, str):
+            if isinstance(cell_value, datetime):
+                cell_date = cell_value.date()
+            elif isinstance(cell_value, str):
+                try:
+                    # First attempt: "dd-MMM" format (e.g., "04-Mar")
+                    cell_date = datetime.strptime(cell_value, "%d-%b").date()
+                except ValueError:
                     try:
-                        cell_date = datetime.strptime(cell_value, "%d-%b").strftime("%d-%b")
+                        # Second attempt: "MM/DD/YYYY" format
+                        cell_date = datetime.strptime(cell_value, "%m/%d/%Y").date()
                     except ValueError:
-                        continue  # Skip invalid date formats
+                        continue  # Skip non-date strings
 
             if cell_date == selected_date:
-                return col  # Return the existing column
+                return col  # Found the correct column
 
-        logging.error(f"Date {selected_date} not found in the sheet.")
-        return None  # Return None instead of creating a new column
+        logging.error(f"Date {selected_date.strftime('%d-%b')} not found in the sheet.")
+        return None  # Return None if not found
     except Exception as e:
         logging.error(f"Error finding date column: {e}")
         return None
-
-
 
 
 def load_workbook(file_path):
@@ -210,21 +211,22 @@ def save_config(data):
 
 
 def save_last_file_path(file_path):
-    """Save the last selected file path to the configuration file."""
+    """Save the last selected file path to the JSON configuration file."""
     try:
         config = load_config()
-        config["last_file"] = file_path
+        config["last_used_workbook"] = file_path
         save_config(config)
-        logging.info(f"Saved last file path: {file_path}")
+        logging.info(f"Saved last used workbook: {file_path}")
+        print(f"DEBUG: Last used workbook saved -> {file_path}")
     except Exception as e:
         logging.error(f"Failed to save last file path: {e}")
 
 
 def load_last_file_path():
-    """Load the last selected file path from the configuration file."""
+    """Load the last selected file path from the JSON configuration file."""
     try:
         config = load_config()
-        return config.get("last_file")
+        return config.get("last_used_workbook")
     except Exception as e:
         logging.error(f"Failed to load last file path: {e}")
         return None

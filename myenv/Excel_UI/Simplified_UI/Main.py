@@ -77,7 +77,6 @@ class DataEntryApp(tk.Tk):
         self.title("Professional Data Entry")
         self.resizable(True, True)
         self.auto_load_last_window_size()
-        #self.bind("<Configure>", self.save_window_size)  # Save size on resize
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
 
@@ -97,6 +96,8 @@ class DataEntryApp(tk.Tk):
     def auto_load_last_file(self):
         """Auto-load the last selected file if it exists."""
         last_file = load_last_file_path()
+        print(f"DEBUG: Last file retrieved -> {last_file}")
+
         if last_file and os.path.exists(last_file):
             try:
                 self.workbook = load_workbook(last_file)
@@ -107,9 +108,16 @@ class DataEntryApp(tk.Tk):
                     self.recognition_manager = RecognitionEntryManager(self.workbook)
 
                 logging.info(f"Auto-loaded file: {last_file}")
+                messagebox.showinfo("Success", f"Auto-loaded last used workbook: {last_file}")
+
+            
             except Exception as e:
                 logging.error(f"Failed to auto-load file: {e}")
                 messagebox.showerror("Error", f"Failed to auto-load file: {e}")
+
+        else:
+            logging.warning("No last used file found or file does not exist.")
+            print("DEBUG: No last used file found or file does not exist.")  # Debugging statement
 
     def auto_load_last_window_size(self):
         """Restore the last saved window size and position from config.json."""
@@ -354,9 +362,11 @@ class DataEntryApp(tk.Tk):
                     return  # User canceled the file dialog
 
                 # Save the selected file path to config.json
-                config[key] = file_path
+                save_last_file_path(file_path)
                 save_config(config)
                 logging.info(f"Saved {key} file path: {file_path}")
+                print(f"DEBUG: Saved last used file -> {file_path}")  # Debugging statement
+
 
             # Load the Excel file
             self.workbook = load_workbook(file_path,)
@@ -364,8 +374,8 @@ class DataEntryApp(tk.Tk):
             self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
 
             # Call extend_date_row to ensure the date row is updated
-            #if not read_only and "Data" in self.sheet_mapping:
-            extend_date_row(self.sheet_mapping["Data"], start_column=3)
+            if not read_only and "Data" in self.sheet_mapping:
+                extend_date_row(self.sheet_mapping["Data"], start_column=3)
 
             mode = "Read-Only" if read_only else "Read-Write"
             logging.info(f"Loaded file: {file_path} ({mode})")
@@ -382,7 +392,6 @@ class DataEntryApp(tk.Tk):
             return
 
         try:
-            # Get the selected date
             selected_date = self.date_selection.get()
             if not selected_date:
                 messagebox.showerror("Error", "Please select a date.")
@@ -391,48 +400,49 @@ class DataEntryApp(tk.Tk):
             selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
             data_sheet = self.sheet_mapping.get("Data")
 
-            # Prevent saving to the Boxing Log file
             if self.file_path and "Boxing Log" in self.file_path:
                 messagebox.showinfo("Read-Only Mode", "Cannot save changes to the Boxing Log file.")
                 return
 
             if data_sheet:
-                # Extend the date row to include all missing dates
+                # Ensure the date row is up to date
                 extend_date_row(data_sheet, start_column=3)
 
-                # Find or add the column for the selected date
+                # Find the existing column for the selected date
                 date_column = find_or_add_date_column(data_sheet, selected_date, start_column=3)
-                
-                # Save field data to the Excel sheet
+                if date_column is None:
+                    messagebox.showerror("Error", f"Date {selected_date.strftime('%d-%b')} not found in the sheet.")
+                    return
+
+                # Save field data
                 for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
                     if sheet_name == "Data":
                         value = self.fields[field_name].get()
 
-                        # Handle Truck Fill % separately
+                        # Special case: Truck Fill %
                         if field_name == "Truck Fill %":
                             try:
-                                # Strip '%' if present and convert to numeric
                                 if "%" in value:
                                     value = float(value.strip('%')) / 100 * 26
-                                # Recalculate percentage for consistency
                                 value = calculate_truck_fill_percentage(value)
                             except ValueError as e:
                                 logging.error(f"Error saving Truck Fill %: {e}")
-                                messagebox.showerror("Error", "Invalid Truck Fill % value. Please correct it.")
+                                messagebox.showerror("Error", "Invalid Truck Fill % value.")
                                 return
 
-                        # Write the value to the Excel sheet
+                        # Write data to Excel
                         data_sheet.cell(row=row, column=date_column).value = value
                         logging.info(f"Saved '{field_name}' with value '{value}' to column {date_column}.")
 
-            # Save the workbook
-            save_workbook(self.workbook, self.file_path)
-            logging.info("Workbook saved successfully.")
-            messagebox.showinfo("Success", "Data saved successfully!")
+                # Save workbook
+                save_workbook(self.workbook, self.file_path)
+                logging.info("Workbook saved successfully.")
+                messagebox.showinfo("Success", "Data saved successfully!")
 
         except Exception as e:
             logging.error(f"Error saving data: {e}")
             messagebox.showerror("Error", f"Failed to save data: {e}")
+
 
 
 
