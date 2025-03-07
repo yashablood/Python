@@ -50,3 +50,27 @@
 2025-03-06 01:21:02,288 - ERROR - Date 06-Mar not found in the sheet.
 2025-03-06 01:21:18,998 - ERROR - Date 06-Mar not found in the sheet.
 2025-03-06 01:40:14,156 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 01:43:24,822 - ERROR - Error loading config: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:43:24,823 - ERROR - Error loading config: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:43:24,923 - ERROR - Error loading Days without Incident data: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:43:52,988 - ERROR - Error loading config: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:43:52,988 - ERROR - Error loading config: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:43:53,088 - ERROR - Error loading Days without Incident data: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:46:38,565 - ERROR - Error loading config: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:46:38,565 - ERROR - Error loading config: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:46:38,673 - ERROR - Error loading Days without Incident data: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:48:52,983 - ERROR - Error loading config: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:48:52,984 - ERROR - Error loading config: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:48:53,087 - ERROR - Error loading Days without Incident data: Expecting property name enclosed in double quotes: line 2 column 1 (char 2)
+2025-03-06 01:50:20,188 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 01:56:02,289 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 02:37:32,490 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 02:47:40,068 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 02:50:25,547 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 03:02:58,795 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 03:03:05,542 - ERROR - Date 03-Mar not found in the sheet.
+2025-03-06 03:03:13,156 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 03:03:20,871 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 21:49:51,455 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 22:23:31,699 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-06 22:27:36,417 - ERROR - Date 06-Mar not found in the sheet.

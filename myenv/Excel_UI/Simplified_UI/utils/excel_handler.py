@@ -18,55 +18,63 @@ logging.basicConfig(
 logging.info(f"Resolved CONFIG_FILE path: {CONFIG_FILE}")
 
 def extend_date_row(sheet, start_column=3):
-    """Extend the date row in the Excel sheet for missing dates up until today and format it as dd-mmm."""
+    """Ensure all missing dates are added to the date row up until today, formatted as dd-mmm."""
     try:
         today = datetime.now().date()
+        print(f"DEBUG: Extending date row up to {today}")  # Debugging statement
 
         # Find the last populated date in the date row
         last_date = None
         last_column = start_column - 1
+
         for col in range(start_column, sheet.max_column + 1):
             cell_value = sheet.cell(row=1, column=col).value
             if cell_value:
-                if isinstance(cell_value, datetime):  # Handle proper datetime values
+                if isinstance(cell_value, datetime):  # If already datetime
                     parsed_date = cell_value.date()
-                elif isinstance(cell_value, str):  # Handle string dates
+                elif isinstance(cell_value, str):  # If stored as string
                     try:
-                        parsed_date = datetime.strptime(cell_value, "%m/%d/%Y").date()
+                        parsed_date = datetime.strptime(cell_value, "%d-%b").date()
                     except ValueError:
-                        parsed_date = None
-
+                        try:
+                            parsed_date = datetime.strptime(cell_value, "%m/%d/%Y").date()
+                        except ValueError:
+                            parsed_date = None  # Skip invalid formats
 
                 if parsed_date:
                     last_date = parsed_date
                     last_column = col
+                    print(f"DEBUG: Found existing date -> {parsed_date}")  # Debugging statement
 
         # If no date is found, initialize with January 1 of the current year
         if not last_date:
             last_date = datetime(today.year, 1, 1).date()
+            print(f"DEBUG: No existing dates found, starting from {last_date}")
 
-        # Start extending dates from the day after the last date
+        # Start extending dates from the day after the last recorded date
         next_date = last_date + timedelta(days=1)
         current_column = last_column + 1
 
-        # Add all missing dates until the current date
+        # Add all missing dates up to today
         while next_date <= today:
-            # Check if the current date already exists in the date row
+            # Check if the date already exists in the sheet
             is_duplicate = any(
-                sheet.cell(row=1, column=col).value == next_date
+                isinstance(sheet.cell(row=1, column=col).value, datetime) and
+                sheet.cell(row=1, column=col).value.date() == next_date
                 for col in range(start_column, sheet.max_column + 1)
             )
             if not is_duplicate:
                 cell = sheet.cell(row=1, column=current_column)
                 cell.value = next_date
-                cell.number_format = "DD-MMM"  # Ensure correct display format
-                logging.info(f"Added date {next_date.strftime('%d-%b')} to column {current_column}.")
+                cell.number_format = "DD-MMM"  # Ensure Excel displays the correct format
+                print(f"DEBUG: Added missing date -> {next_date.strftime('%d-%b')} at column {current_column}")  # Debugging statement
 
                 current_column += 1
             next_date += timedelta(days=1)
 
     except Exception as e:
         logging.error(f"Error extending date row: {e}")
+        print(f"DEBUG: Error extending date row -> {e}")  # Debugging statement
 
 
 def save_days_without_incident_data(counter, last_date):
@@ -187,13 +195,57 @@ def read_cell(sheet, row, col):
 
 
 def load_config():
-    """Load configuration data from the JSON file."""
+    """Load configuration data from the JSON file, creating default values if necessary."""
     try:
         if not os.path.exists(CONFIG_FILE):
             logging.warning(f"Config file not found. Creating a new one at {CONFIG_FILE}.")
-            return {}
+            default_config = {
+                "window_geometry": "800x600",
+                "counter": 0,
+                "last_date": datetime.now().strftime("%Y-%m-%d"),
+                "last_used_workbook": "",  # ✅ Ensure this key exists
+                "boxing_tier_file": "",
+                "boxing_log_file": ""
+            }
+            save_config(default_config)  # Save default config
+            return default_config
+
         with open(CONFIG_FILE, "r") as f:
-            return json.load(f)
+            config = json.load(f)
+
+        # ✅ Ensure all required keys exist (to prevent issues)
+        default_keys = {
+            "window_geometry": "800x600",
+            "counter": 0,
+            "last_date": datetime.now().strftime("%Y-%m-%d"),
+            "last_used_workbook": "",
+            "boxing_tier_file": "",
+            "boxing_log_file": ""
+        }
+
+        for key, default_value in default_keys.items():
+            if key not in config:
+                config[key] = default_value  # Add missing keys
+
+        save_config(config)  # Save the updated config with missing values
+        return config
+
+    except json.JSONDecodeError:
+        logging.error("Corrupt config.json detected! Resetting to default settings.")
+        print("DEBUG: config.json is corrupted. Resetting to default.")
+
+        default_config = {
+            "window_geometry": "800x600",
+            "counter": 0,
+            "last_date": datetime.now().strftime("%Y-%m-%d"),
+            "last_used_workbook": "",
+            "boxing_tier_file": "",
+            "boxing_log_file": ""
+        }
+
+        save_config(default_config)  # Save default config
+        return default_config
+
     except Exception as e:
         logging.error(f"Error loading config: {e}")
         return {}
