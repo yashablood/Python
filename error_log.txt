@@ -79,3 +79,21 @@
 2025-03-07 03:04:00,692 - ERROR - Date 07-Mar not found in the sheet.
 2025-03-07 03:11:23,133 - ERROR - Date 07-Mar not found in the sheet.
 2025-03-27 01:38:02,337 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 01:51:38,165 - ERROR - Error saving data: cannot access local variable 'selected_date' where it is not associated with a value
+2025-03-27 01:51:48,995 - ERROR - Error saving data: cannot access local variable 'selected_date' where it is not associated with a value
+2025-03-27 01:51:54,778 - ERROR - Error saving data: cannot access local variable 'selected_date' where it is not associated with a value
+2025-03-27 01:52:23,761 - ERROR - Error saving data: cannot access local variable 'selected_date' where it is not associated with a value
+2025-03-27 01:54:47,783 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 02:03:37,601 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 02:07:53,470 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 02:11:26,180 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 02:14:58,616 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 02:25:12,777 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 02:27:30,254 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 02:34:27,945 - ERROR - Error updating Truck Fill %: Invalid input. Please enter a numeric value between 0 and 26.
+2025-03-27 02:34:40,670 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 02:40:57,466 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 02:45:30,134 - ERROR - Date 27-Mar not found in the sheet.
+2025-03-27 04:02:38,878 - ERROR - Error saving data: extend_date_row() got multiple values for argument 'start_column'
+2025-03-27 04:56:37,254 - ERROR - Error saving data: name 'date_col' is not defined
+2025-03-27 04:56:44,495 - ERROR - Error saving data: name 'date_col' is not defined

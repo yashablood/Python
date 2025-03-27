@@ -4,6 +4,10 @@ import os
 import json
 from datetime import datetime, timedelta
 from tkinter import messagebox
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment
+
+#from scripts.config_handler import load_config, save_config
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
@@ -17,55 +21,91 @@ logging.basicConfig(
 
 logging.info(f"Resolved CONFIG_FILE path: {CONFIG_FILE}")
 
-def extend_date_row(sheet, start_column):
-    """Extend the date row in the Excel sheet for missing dates up until today."""
+def extend_date_row(workbook, sheet, file_path, start_column=3):
+
+    #wb = openpyxl.load_workbook(file_path)
+    #ws = wb[sheet_name]
+    """Ensure all missing dates are added to the date row up until today, formatted as dd-mmm."""
     try:
         today = datetime.now().date()
+        print(f"DEBUG: Extending date row up to {today}")
+        print(f"DEBUG: Sheet title -> {sheet.title}")
+        print(f"DEBUG: Current max column -> {sheet.max_column}")
 
-        # Find the last populated date in the date row
+        # Step 1: Find last valid date in row 1
         last_date = None
         last_column = start_column - 1
+
         for col in range(start_column, sheet.max_column + 1):
             cell_value = sheet.cell(row=1, column=col).value
+            parsed_date = None
+
             if cell_value:
-                if isinstance(cell_value, datetime):  # Handle proper datetime values
+                if isinstance(cell_value, datetime):
                     parsed_date = cell_value.date()
-                elif isinstance(cell_value, str):  # Handle string dates
+                elif isinstance(cell_value, str):
                     try:
                         parsed_date = datetime.strptime(cell_value, "%d-%b").date()
                     except ValueError:
-                        parsed_date = None
+                        try:
+                            parsed_date = datetime.strptime(cell_value, "%m/%d/%Y").date()
+                        except ValueError:
+                            parsed_date = None
 
-                if parsed_date:
-                    last_date = parsed_date
-                    last_column = col
+            if parsed_date:
+                print(f"DEBUG: Found existing date in col {col} -> {parsed_date}")
+                last_date = parsed_date
+                last_column = col
 
-        # If no date is found, initialize with January 1 of the current year
         if not last_date:
             last_date = datetime(today.year, 1, 1).date()
+            print(f"DEBUG: No existing date found. Defaulting to: {last_date}")
 
-        # Start extending dates from the day after the last date
+        # Step 2: Append missing dates
         next_date = last_date + timedelta(days=1)
         current_column = last_column + 1
+        print(f"DEBUG: Starting extension from {next_date}")
 
-        # Add all missing dates until the current date
         while next_date <= today:
-            # Check if the current date already exists in the date row
-            is_duplicate = any(
-                sheet.cell(row=1, column=col).value == next_date
-                for col in range(start_column, sheet.max_column + 1)
-            )
+            # Confirm it's not already in the sheet
+            is_duplicate = False
+            for col in range(start_column, sheet.max_column + 1):
+                val = sheet.cell(row=1, column=col).value
+                if isinstance(val, datetime) and val.date() == next_date:
+                    is_duplicate = True
+                    break
+
             if not is_duplicate:
                 cell = sheet.cell(row=1, column=current_column)
                 cell.value = next_date
-                cell.number_format = "dd-mmm"  # Ensure consistent formatting
-                logging.info(f"Added date {next_date.strftime('%d-%b')} to column {current_column}.")
+                cell.number_format = "DD-MMM"
+                print(f"DEBUG: Added missing date -> {next_date.strftime('%d-%b')} at column {current_column}")
                 current_column += 1
+
             next_date += timedelta(days=1)
 
-    except Exception as e:
-        logging.error(f"Error extending date row: {e}")
+        print(f"DEBUG: Completed extension. Final max column: {sheet.max_column}")
+        print("DEBUG: Final date row after extension:")
+        
+        # Save the workbook after adding missing dates
+        try:
+            print("DEBUG: Saving workbook after extending date row...")
+            workbook.save(file_path)
+            print(f"DEBUG: Workbook saved to {file_path}")
+        except Exception as e:
+            print(f"ERROR: Failed to save workbook after extending date row: {e}")
+            logging.error(f"Failed to save workbook: {e}")
 
+        
+        for col in range(1, sheet.max_column + 1):
+            cell_val = sheet.cell(row=1, column=col).value
+            print(f"  Col {col}: {cell_val} ({type(cell_val)})")
+
+    except Exception as e:
+        error_message = f"Exception in extend_date_row: {e}"
+        print(f"ERROR: {error_message}")
+        logging.error(error_message)
+        messagebox.showerror("Error", error_message)    
 
 def save_days_without_incident_data(counter, last_date):
     """Save the Days without Incident data to a JSON file."""
@@ -76,8 +116,9 @@ def save_days_without_incident_data(counter, last_date):
         save_config(config)
         logging.info(f"Days without Incident updated: {config}")
     except Exception as e:
-        logging.error(f"Error saving Days without Incident data: {e}")
-
+        error_message = f"Error saving Days without Incident data: {e}"
+        logging.error(error_message)
+        messagebox.showerror("Error", error_message)
 
 def load_days_without_incident_data():
     """Load the Days without Incident data from a JSON file."""
@@ -141,10 +182,11 @@ def save_workbook(workbook, file_path):
     try:
         print(f"Attempting to save workbook to: {file_path}")
         workbook.save(file_path)
-        print(f"Workbook successfully saved to: {file_path}")
+        logging.info(f"Workbook saved to {file_path}")
     except Exception as e:
-        print(f"Error saving workbook: {e}")
-        raise
+        logging.error(f"Failed to save workbook: {e}")
+        print(f"DEBUG: Failed to save workbook: {e}")
+        #raise
 
 
 def get_sheet(workbook, sheet_name):

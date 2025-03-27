@@ -19,11 +19,12 @@ from utils.excel_handler import (
 import os
 import logging
 
-
-
 # Configure logging
-logging.basicConfig(filename='app.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
+logging.basicConfig(
+    filename=os.path.join(os.path.dirname(__file__), 'app.log'),
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 def update_days_without_incident(reset_toggle):
     try:
@@ -63,6 +64,14 @@ class DataEntryApp(tk.Tk):
         self.recognition_fields = {}  # Holds StringVar instances for recognition input fields
         self.field_to_sheet_mapping = {}  # Maps fields to sheets and cell locations
         self.date_selection = tk.StringVar()
+
+        log_path = os.path.join(os.path.dirname(__file__), "error.log")
+        logging.basicConfig(
+            filename=log_path,
+            level=logging.ERROR,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+
 
         self.auto_load_last_file()
         self.create_ui()
@@ -328,11 +337,13 @@ class DataEntryApp(tk.Tk):
 
     def save_data(self):
         """Save data to the workbook."""
+        
         if not self.workbook:
             messagebox.showerror("Error", "No workbook loaded.")
             return
 
         try:
+
             selected_date = self.date_selection.get()
             if not selected_date:
                 messagebox.showerror("Error", "Please select a date.")
@@ -346,11 +357,22 @@ class DataEntryApp(tk.Tk):
                 return
 
             if data_sheet:
+                print(f"DEBUG: File path for workbook -> {self.file_path}")
+                print(f"DEBUG: Sheet mapping keys -> {list(self.sheet_mapping.keys())}")
+
                 # ✅ Log before running extend_date_row()
                 print(f"DEBUG: Running extend_date_row() before saving data for {selected_date}")
 
+                
+                # Make sure we're extending the date row before trying to find the column
+                logging.debug(f"Running extend_date_row() before saving data for {selected_date}")
                 extend_date_row(data_sheet, start_column=3)
+                print("DEBUG: Returned from extend_date_row()")
 
+                save_workbook(self.workbook, self.file_path)
+                print("DEBUG: Saving workbook after extend_date_row()")
+                self.workbook = load_workbook(self.file_path)
+                print("DEBUG: Reloaded workbook after saving.")
                 # ✅ Log before checking if the date exists
                 print(f"DEBUG: Checking for date column after extend_date_row()")
 
@@ -381,7 +403,9 @@ class DataEntryApp(tk.Tk):
                         data_sheet.cell(row=row, column=date_column).value = value
                         logging.info(f"Saved '{field_name}' with value '{value}' to column {date_column}.")
 
+
                 # Save workbook
+                print(f"DEBUG: Final save to workbook after writing values")
                 save_workbook(self.workbook, self.file_path)
                 logging.info("Workbook saved successfully.")
                 messagebox.showinfo("Success", "Data saved successfully!")
@@ -412,6 +436,9 @@ class DataEntryApp(tk.Tk):
 
             # Load the Excel file
             self.workbook = load_workbook(file_path,)
+            print(f"DEBUG: Workbook object loaded: {self.workbook}")
+            print(f"DEBUG: Active sheet title -> {self.workbook.active.title}")
+
             self.file_path = file_path
             self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
 
