@@ -17,64 +17,54 @@ logging.basicConfig(
 
 logging.info(f"Resolved CONFIG_FILE path: {CONFIG_FILE}")
 
-def extend_date_row(sheet, start_column=3):
-    """Ensure all missing dates are added to the date row up until today, formatted as dd-mmm."""
+def extend_date_row(sheet, start_column):
+    """Extend the date row in the Excel sheet for missing dates up until today."""
     try:
         today = datetime.now().date()
-        print(f"DEBUG: Extending date row up to {today}")  # Debugging statement
 
         # Find the last populated date in the date row
         last_date = None
         last_column = start_column - 1
-
         for col in range(start_column, sheet.max_column + 1):
             cell_value = sheet.cell(row=1, column=col).value
             if cell_value:
-                if isinstance(cell_value, datetime):  # If already datetime
+                if isinstance(cell_value, datetime):  # Handle proper datetime values
                     parsed_date = cell_value.date()
-                elif isinstance(cell_value, str):  # If stored as string
+                elif isinstance(cell_value, str):  # Handle string dates
                     try:
                         parsed_date = datetime.strptime(cell_value, "%d-%b").date()
                     except ValueError:
-                        try:
-                            parsed_date = datetime.strptime(cell_value, "%m/%d/%Y").date()
-                        except ValueError:
-                            parsed_date = None  # Skip invalid formats
+                        parsed_date = None
 
                 if parsed_date:
                     last_date = parsed_date
                     last_column = col
-                    print(f"DEBUG: Found existing date -> {parsed_date}")  # Debugging statement
 
         # If no date is found, initialize with January 1 of the current year
         if not last_date:
             last_date = datetime(today.year, 1, 1).date()
-            print(f"DEBUG: No existing dates found, starting from {last_date}")
 
-        # Start extending dates from the day after the last recorded date
+        # Start extending dates from the day after the last date
         next_date = last_date + timedelta(days=1)
         current_column = last_column + 1
 
-        # Add all missing dates up to today
+        # Add all missing dates until the current date
         while next_date <= today:
-            # Check if the date already exists in the sheet
+            # Check if the current date already exists in the date row
             is_duplicate = any(
-                isinstance(sheet.cell(row=1, column=col).value, datetime) and
-                sheet.cell(row=1, column=col).value.date() == next_date
+                sheet.cell(row=1, column=col).value == next_date
                 for col in range(start_column, sheet.max_column + 1)
             )
             if not is_duplicate:
                 cell = sheet.cell(row=1, column=current_column)
                 cell.value = next_date
-                cell.number_format = "DD-MMM"  # Ensure Excel displays the correct format
-                print(f"DEBUG: Added missing date -> {next_date.strftime('%d-%b')} at column {current_column}")  # Debugging statement
-
+                cell.number_format = "dd-mmm"  # Ensure consistent formatting
+                logging.info(f"Added date {next_date.strftime('%d-%b')} to column {current_column}.")
                 current_column += 1
             next_date += timedelta(days=1)
 
     except Exception as e:
         logging.error(f"Error extending date row: {e}")
-        print(f"DEBUG: Error extending date row -> {e}")  # Debugging statement
 
 
 def save_days_without_incident_data(counter, last_date):
@@ -275,6 +265,17 @@ def save_last_file_path(file_path):
 
 
 def load_last_file_path():
+    """Load the last selected file path from the configuration file."""
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r") as f:
+                data = json.load(f)
+                return data.get("last_file")
+    except Exception as e:
+        logging.error(f"Failed to load last file path: {e}")
+    return None
+
+#def load_last_file_path():
     """Load the last selected file path from the JSON configuration file."""
     try:
         config = load_config()

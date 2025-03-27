@@ -74,3 +74,8 @@
 2025-03-06 21:49:51,455 - ERROR - Date 06-Mar not found in the sheet.
 2025-03-06 22:23:31,699 - ERROR - Date 06-Mar not found in the sheet.
 2025-03-06 22:27:36,417 - ERROR - Date 06-Mar not found in the sheet.
+2025-03-07 03:03:46,801 - ERROR - Date 07-Mar not found in the sheet.
+2025-03-07 03:03:57,433 - ERROR - Date 07-Mar not found in the sheet.
+2025-03-07 03:04:00,692 - ERROR - Date 07-Mar not found in the sheet.
+2025-03-07 03:11:23,133 - ERROR - Date 07-Mar not found in the sheet.
+2025-03-27 01:38:02,337 - ERROR - Date 27-Mar not found in the sheet.

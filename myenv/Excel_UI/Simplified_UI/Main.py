@@ -326,6 +326,70 @@ class DataEntryApp(tk.Tk):
             ttk.Label(frame, text=field_name).grid(row=idx, column=0, padx=10, pady=5, sticky="w")
             ttk.Entry(frame, textvariable=var).grid(row=idx, column=1, padx=10, pady=5, sticky="ew")
 
+    def save_data(self):
+        """Save data to the workbook."""
+        if not self.workbook:
+            messagebox.showerror("Error", "No workbook loaded.")
+            return
+
+        try:
+            selected_date = self.date_selection.get()
+            if not selected_date:
+                messagebox.showerror("Error", "Please select a date.")
+                return
+
+            selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
+            data_sheet = self.sheet_mapping.get("Data")
+
+            if self.file_path and "Boxing Log" in self.file_path:
+                messagebox.showinfo("Read-Only Mode", "Cannot save changes to the Boxing Log file.")
+                return
+
+            if data_sheet:
+                # ✅ Log before running extend_date_row()
+                print(f"DEBUG: Running extend_date_row() before saving data for {selected_date}")
+
+                extend_date_row(data_sheet, start_column=3)
+
+                # ✅ Log before checking if the date exists
+                print(f"DEBUG: Checking for date column after extend_date_row()")
+
+                # Find the existing column for the selected date
+                date_column = find_or_add_date_column(data_sheet, selected_date, start_column=3)
+
+                if date_column is None:
+                    messagebox.showerror("Error", f"Date {selected_date.strftime('%d-%b')} not found in the sheet.")
+                    return
+
+                # Save field data
+                for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
+                    if sheet_name == "Data":
+                        value = self.fields[field_name].get()
+
+                        # Special case: Truck Fill %
+                        if field_name == "Truck Fill %":
+                            try:
+                                if "%" in value:
+                                    value = float(value.strip('%')) / 100 * 26
+                                value = calculate_truck_fill_percentage(value)
+                            except ValueError as e:
+                                logging.error(f"Error saving Truck Fill %: {e}")
+                                messagebox.showerror("Error", "Invalid Truck Fill % value.")
+                                return
+
+                        # Write data to Excel
+                        data_sheet.cell(row=row, column=date_column).value = value
+                        logging.info(f"Saved '{field_name}' with value '{value}' to column {date_column}.")
+
+                # Save workbook
+                save_workbook(self.workbook, self.file_path)
+                logging.info("Workbook saved successfully.")
+                messagebox.showinfo("Success", "Data saved successfully!")
+
+        except Exception as e:
+            logging.error(f"Error saving data: {e}")
+            messagebox.showerror("Error", f"Failed to save data: {e}")
+            
     def load_excel_file(self, key, read_only=False):
         """Load the specified Excel file in read-only or read-write mode."""
         try:
@@ -339,33 +403,17 @@ class DataEntryApp(tk.Tk):
                     filetypes=[("Excel files", "*.xlsx *.xlsm")]
                 )
                 if not file_path:
-                    print("DEBUG: No file selected.")
-                    return  # User canceled file selection
-            
+                    return  # User canceled the file dialog
+
                 # Save the selected file path to config.json
-                save_last_file_path(file_path)
+                config[key] = file_path
                 save_config(config)
                 logging.info(f"Saved {key} file path: {file_path}")
-                print(f"DEBUG: Saved last used file -> {file_path}")  # Debugging statement
-
 
             # Load the Excel file
             self.workbook = load_workbook(file_path,)
             self.file_path = file_path
             self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
-
-            if self.workbook:
-                print(f"DEBUG: Workbook successfully loaded -> {file_path}")
-            else:
-                print("DEBUG: Workbook is None after loading!")
-
-
-            if "Recognitions" in self.sheet_mapping:
-                self.recognition_manager = RecognitionEntryManager(self.workbook)
-
-            # Call extend_date_row to ensure the date row is updated
-            if not read_only and "Data" in self.sheet_mapping:
-                extend_date_row(self.sheet_mapping["Data"], start_column=3)
 
             mode = "Read-Only" if read_only else "Read-Write"
             logging.info(f"Loaded file: {file_path} ({mode})")
@@ -373,74 +421,7 @@ class DataEntryApp(tk.Tk):
 
         except Exception as e:
             logging.error(f"Error loading Excel file: {e}")
-            print(f"DEBUG: Error loading workbook -> {e}")
             messagebox.showerror("Error", f"Failed to load Excel file: {e}")
-
-def save_data(self):
-    """Save data to the workbook."""
-    if not self.workbook:
-        messagebox.showerror("Error", "No workbook loaded.")
-        return
-
-    try:
-        selected_date = self.date_selection.get()
-        if not selected_date:
-            messagebox.showerror("Error", "Please select a date.")
-            return
-
-        selected_date = datetime.strptime(selected_date, "%m/%d/%Y").date()
-        data_sheet = self.sheet_mapping.get("Data")
-
-        if self.file_path and "Boxing Log" in self.file_path:
-            messagebox.showinfo("Read-Only Mode", "Cannot save changes to the Boxing Log file.")
-            return
-
-        if data_sheet:
-            # ✅ Log before running extend_date_row()
-            print(f"DEBUG: Running extend_date_row() before saving data for {selected_date}")
-
-            extend_date_row(data_sheet, start_column=3)
-
-            # ✅ Log before checking if the date exists
-            print(f"DEBUG: Checking for date column after extend_date_row()")
-
-            # Find the existing column for the selected date
-            date_column = find_or_add_date_column(data_sheet, selected_date, start_column=3)
-
-            if date_column is None:
-                messagebox.showerror("Error", f"Date {selected_date.strftime('%d-%b')} not found in the sheet.")
-                return
-
-            # Save field data
-            for field_name, (sheet_name, (row, _)) in self.field_to_sheet_mapping.items():
-                if sheet_name == "Data":
-                    value = self.fields[field_name].get()
-
-                    # Special case: Truck Fill %
-                    if field_name == "Truck Fill %":
-                        try:
-                            if "%" in value:
-                                value = float(value.strip('%')) / 100 * 26
-                            value = calculate_truck_fill_percentage(value)
-                        except ValueError as e:
-                            logging.error(f"Error saving Truck Fill %: {e}")
-                            messagebox.showerror("Error", "Invalid Truck Fill % value.")
-                            return
-
-                    # Write data to Excel
-                    data_sheet.cell(row=row, column=date_column).value = value
-                    logging.info(f"Saved '{field_name}' with value '{value}' to column {date_column}.")
-
-            # Save workbook
-            save_workbook(self.workbook, self.file_path)
-            logging.info("Workbook saved successfully.")
-            messagebox.showinfo("Success", "Data saved successfully!")
-
-    except Exception as e:
-        logging.error(f"Error saving data: {e}")
-        messagebox.showerror("Error", f"Failed to save data: {e}")
-
-
 
 
 if __name__ == "__main__":
