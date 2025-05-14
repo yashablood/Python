@@ -252,7 +252,8 @@ def load_config():
             "last_date": datetime.now().strftime("%Y-%m-%d"),
             "last_used_workbook": "",
             "boxing_tier_file": "",
-            "boxing_log_file": ""
+            "boxing_log_file": "",
+            "last_selected_workbook": "Boxing Tier"
         }
 
         for key, default_value in default_keys.items():

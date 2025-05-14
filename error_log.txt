@@ -97,3 +97,24 @@
 2025-03-27 04:02:38,878 - ERROR - Error saving data: extend_date_row() got multiple values for argument 'start_column'
 2025-03-27 04:56:37,254 - ERROR - Error saving data: name 'date_col' is not defined
 2025-03-27 04:56:44,495 - ERROR - Error saving data: name 'date_col' is not defined
+2025-05-13 23:59:08,656 - ERROR - Error saving data: extend_date_row() missing 2 required positional arguments: 'sheet' and 'file_path'
+2025-05-14 00:00:35,621 - ERROR - Error saving data: extend_date_row() missing 2 required positional arguments: 'sheet' and 'file_path'
+2025-05-14 00:09:59,567 - ERROR - Unhandled exception in main UI
+Traceback (most recent call last):
+  File "c:\Users\thomas\Documents\GitHub\Python-1\myenv\Excel_UI\Simplified_UI\Main.py", line 95, in main
+    sheet1_manager = Sheet1Manager(sheet1_frame, recognition_frame)
+                     ^^^^^^^^^^^^^
+NameError: name 'Sheet1Manager' is not defined
+2025-05-14 00:15:17,565 - ERROR - Unhandled exception in main UI
+Traceback (most recent call last):
+  File "c:\Users\thomas\Documents\GitHub\Python-1\myenv\Excel_UI\Simplified_UI\Main.py", line 96, in main
+    sheet1_manager = Sheet1Manager(sheet1_frame, recognition_frame)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Sheet1Manager.__init__() takes 2 positional arguments but 3 were given
+2025-05-14 01:44:08,560 - ERROR - Error saving data: extend_date_row() missing 2 required positional arguments: 'sheet' and 'file_path'
+2025-05-14 01:49:48,669 - ERROR - Error saving data: extend_date_row() missing 1 required positional argument: 'file_path'
+2025-05-14 01:51:14,387 - ERROR - Error saving data: extend_date_row() missing 1 required positional argument: 'file_path'
+2025-05-14 01:57:51,598 - ERROR - Error saving data: extend_date_row() missing 1 required positional argument: 'file_path'
+2025-05-14 01:58:16,721 - ERROR - Error saving data: extend_date_row() missing 1 required positional argument: 'file_path'
+2025-05-14 02:10:35,635 - ERROR - Error saving data: extend_date_row() missing 1 required positional argument: 'file_path'
+2025-05-14 02:39:35,873 - ERROR - Error saving data: extend_date_row() missing 1 required positional argument: 'file_path'

@@ -108,6 +108,24 @@ class DataEntryApp(tk.Tk):
             logging.warning("No last used file found or file does not exist.")
             print("DEBUG: No last used file found or file does not exist.")  # Debugging statement
 
+        # Auto-load specific workbook paths from config
+        config = load_config()
+        tier_file = config.get("boxing_tier_file")
+        log_file = config.get("boxing_log_file")
+
+        if tier_file and os.path.exists(tier_file):
+            try:
+                self.workbook = load_workbook(tier_file)
+                self.file_path = tier_file
+                self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
+                logging.info(f"Auto-loaded Boxing Tier file: {tier_file}")
+            except Exception as e:
+                logging.error(f"Failed to auto-load Boxing Tier file: {e}")
+
+        if log_file and os.path.exists(log_file):
+            logging.info(f"Boxing Log file is available: {log_file}")
+            # Optional: You could auto-load it in read-only mode
+
     def auto_load_last_window_size(self):
         """Restore the last saved window size and position from config.json."""
         try:
@@ -164,6 +182,45 @@ class DataEntryApp(tk.Tk):
         # Boxing Log button (read-only)
         file_button_2 = ttk.Button(menu_frame, text="Boxing Log", command=self.load_boxing_log)
         file_button_2.grid(row=0, column=1, padx=5, pady=5)
+
+        # Add a toggle frame
+        toggle_frame = ttk.Frame(menu_frame)
+        toggle_frame.grid(row=0, column=2, padx=10)
+
+        config = load_config()
+        default_choice = config.get("last_selected_workbook", "Boxing Tier")
+        self.selected_workbook = tk.StringVar(value=default_choice)
+
+        ttk.Radiobutton(toggle_frame, text="Boxing Tier", variable=self.selected_workbook,
+            value="Boxing Tier", command=self.switch_workbook).pack(side="left")
+        ttk.Radiobutton(toggle_frame, text="Boxing Log", variable=self.selected_workbook,
+            value="Boxing Log", command=self.switch_workbook).pack(side="left")
+
+    def switch_workbook(self):
+        config = load_config()
+        choice = self.selected_workbook.get()
+        config["last_selected_workbook"] = choice  # 📝 Save current toggle choice
+        save_config(config)
+
+        if choice == "Boxing Tier":
+            file_path = config.get("boxing_tier_file")
+        elif choice == "Boxing Log":
+            file_path = config.get("boxing_log_file")
+        else:
+            file_path = None
+
+        if file_path and os.path.exists(file_path):
+            try:
+                self.workbook = load_workbook(file_path, read_only=("Log" in choice))
+                self.file_path = file_path
+                self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
+                logging.info(f"Switched to {choice} workbook.")
+                messagebox.showinfo("Switched", f"Now using: {os.path.basename(file_path)}")
+            except Exception as e:
+                logging.error(f"Failed to switch workbook: {e}")
+                messagebox.showerror("Error", f"Could not load {choice} workbook.")
+        else:
+            messagebox.showerror("File Missing", f"{choice} file not found. Please load it via the button.")
 
     def load_boxing_tier(self):
         """Load the Boxing Tier file in read-write mode."""
@@ -287,6 +344,8 @@ class DataEntryApp(tk.Tk):
                 entry.bind("<FocusOut>", self.update_truck_fill_percentage)
 
         save_button = ttk.Button(self.scrollable_frame, text="Save Data", command=self.save_data)
+        save_button.configure(takefocus=True)  # ensures it's tabbable
+        save_button.bind("<Return>", lambda event: self.save_data())
         save_button.pack(pady=10)
 
         self.add_fields(self.recognition_frame, self.recognition_fields)
@@ -366,13 +425,15 @@ class DataEntryApp(tk.Tk):
                 
                 # Make sure we're extending the date row before trying to find the column
                 logging.debug(f"Running extend_date_row() before saving data for {selected_date}")
-                extend_date_row(data_sheet, start_column=3)
+                extend_date_row(self.workbook, data_sheet, self.file_path,)
                 print("DEBUG: Returned from extend_date_row()")
 
                 save_workbook(self.workbook, self.file_path)
                 print("DEBUG: Saving workbook after extend_date_row()")
                 self.workbook = load_workbook(self.file_path)
                 print("DEBUG: Reloaded workbook after saving.")
+                self.sheet_mapping = {name: self.workbook[name] for name in self.workbook.sheetnames}
+                data_sheet = self.sheet_mapping.get("Data")
                 # ✅ Log before checking if the date exists
                 print(f"DEBUG: Checking for date column after extend_date_row()")
 
