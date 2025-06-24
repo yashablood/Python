@@ -14,7 +14,8 @@ from utils.excel_handler import (
     load_config,
     save_config,
     save_last_file_path,
-    load_last_file_path
+    load_last_file_path,
+    create_or_update_dashboard
     )
 import os
 import logging
@@ -469,6 +470,7 @@ class DataEntryApp(tk.Tk):
                 print(f"DEBUG: Final save to workbook after writing values")
                 save_workbook(self.workbook, self.file_path)
                 logging.info("Workbook saved successfully.")
+                create_or_update_dashboard(self.workbook, data_sheet, self.file_path, selected_date)
                 messagebox.showinfo("Success", "Data saved successfully!")
 
         except Exception as e:

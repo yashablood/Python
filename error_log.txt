@@ -118,3 +118,6 @@ TypeError: Sheet1Manager.__init__() takes 2 positional arguments but 3 were give
 2025-05-14 01:58:16,721 - ERROR - Error saving data: extend_date_row() missing 1 required positional argument: 'file_path'
 2025-05-14 02:10:35,635 - ERROR - Error saving data: extend_date_row() missing 1 required positional argument: 'file_path'
 2025-05-14 02:39:35,873 - ERROR - Error saving data: extend_date_row() missing 1 required positional argument: 'file_path'
+2025-05-15 23:20:12,539 - ERROR - Failed to switch workbook: load_workbook() got an unexpected keyword argument 'read_only'
+2025-05-15 23:20:19,858 - ERROR - Failed to switch workbook: load_workbook() got an unexpected keyword argument 'read_only'
+2025-05-15 23:20:26,727 - ERROR - Failed to switch workbook: load_workbook() got an unexpected keyword argument 'read_only'

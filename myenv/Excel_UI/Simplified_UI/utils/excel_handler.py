@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timedelta
 from tkinter import messagebox
 from openpyxl.utils import get_column_letter
-from openpyxl.styles import Alignment
+from openpyxl.styles import PatternFill, Alignment, Font
 
 #from scripts.config_handler import load_config, save_config
 
@@ -133,7 +133,6 @@ def load_days_without_incident_data():
         logging.error(f"Error loading Days without Incident data: {e}")
         raise
 
-
 def find_or_add_date_column(sheet, selected_date, start_column=3):
     """Find the column for the selected date without adding a new one."""
     try:
@@ -164,7 +163,6 @@ def find_or_add_date_column(sheet, selected_date, start_column=3):
         logging.error(f"Error finding date column: {e}")
         return None
 
-
 def load_workbook(file_path):
     """Load an Excel workbook."""
     try:
@@ -176,7 +174,6 @@ def load_workbook(file_path):
         logging.error(f"Failed to load workbook: {file_path} - {e}")
         raise
 
-
 def save_workbook(workbook, file_path):
     """Save the workbook to the specified file path."""
     try:
@@ -187,7 +184,6 @@ def save_workbook(workbook, file_path):
         logging.error(f"Failed to save workbook: {e}")
         print(f"DEBUG: Failed to save workbook: {e}")
         #raise
-
 
 def get_sheet(workbook, sheet_name):
     """Retrieve a specific sheet by name."""
@@ -205,7 +201,6 @@ def get_sheet(workbook, sheet_name):
         raise KeyError(
             f"The sheet {sheet_name} does not exist in the workbook.")
 
-
 def write_to_cell(sheet, row, col, value):
     """Write a value to a specific cell in the sheet."""
     try:
@@ -216,7 +211,6 @@ def write_to_cell(sheet, row, col, value):
         print(f"Error writing to cell ({row}, {col}): {e}")
         raise
 
-
 def read_cell(sheet, row, col):
     """Read a value from a specific cell."""
     try:
@@ -224,7 +218,6 @@ def read_cell(sheet, row, col):
     except Exception as e:
         logging.error(f"Failed to read cell: row={row}, col={col} - {e}")
         raise
-
 
 def load_config():
     """Load configuration data from the JSON file, creating default values if necessary."""
@@ -283,7 +276,6 @@ def load_config():
         logging.error(f"Error loading config: {e}")
         return {}
 
-
 def save_config(data):
     """Save configuration data to the JSON file."""
     try:
@@ -293,7 +285,6 @@ def save_config(data):
         logging.info(f"Config saved to {CONFIG_FILE}")
     except Exception as e:
         logging.error(f"Error saving config: {e}")
-
 
 def save_last_file_path(file_path):
     """Save the last selected file path to the JSON configuration file."""
@@ -305,7 +296,6 @@ def save_last_file_path(file_path):
         print(f"DEBUG: Last used workbook saved -> {file_path}")
     except Exception as e:
         logging.error(f"Failed to save last file path: {e}")
-
 
 def load_last_file_path():
     """Load the last selected file path from the configuration file."""
@@ -327,7 +317,6 @@ def load_last_file_path():
         logging.error(f"Failed to load last file path: {e}")
         return None
 
-
 def calculate_truck_fill_percentage(value):
     """
     Validate and calculate the Truck Fill % based on the maximum value of 26.
@@ -345,3 +334,111 @@ def calculate_truck_fill_percentage(value):
     except ValueError:
         raise ValueError(
             "Invalid input. Please enter a numeric value between 0 and 26.")
+
+def create_or_update_dashboard(workbook, data_sheet, file_path, selected_date, start_column=3):
+    try:
+        # Create sheet if it doesn't exist
+        if "Dashboard (Implemented)" in workbook.sheetnames:
+            sheet = workbook["Dashboard (Implemented)"]
+        else:
+            sheet = workbook.create_sheet("Dashboard (Implemented)")
+            print("DEBUG: Created 'Dashboard (Implemented)' sheet.")
+            build_dashboard_layout(sheet)
+
+        # --- Get the correct date column from the data sheet ---
+        date_col = find_or_add_date_column(data_sheet, selected_date, start_column)
+        if date_col is None:
+            raise ValueError(f"Date {selected_date.strftime('%d-%b')} not found.")
+
+        # --- Define mappings from dashboard rows to data sheet rows ---
+        field_map = {
+            "Days Without Incident": (2, 2),
+            "Haz ID's": (3, 2),
+            "Safety Gemba Walk": (4, 2),
+            "7S (Zone 26)": (5, 2),
+            "7S (Zone 51)": (6, 2),
+            "Errors": (8, 2),
+            "PCD Returns": (9, 2),
+            "Jobs on Hold": (11, 2),
+            "Productivity": (12, 2),
+            "OTIF": (13, 2),
+            "Truck Fill %": (14, 2),
+            "Recognitions": (15, 2),
+            "MC Compliance": (16, 2),
+            "Cost Savings": (18, 2),
+            "Rever's": (19, 2),
+            "Project's": (20, 2),
+        }
+
+        # --- Insert values into dashboard ---
+        for label, (dash_row, dash_col) in field_map.items():
+            for r in range(2, data_sheet.max_row + 1):
+                if data_sheet.cell(row=r, column=1).value == label:
+                    value = data_sheet.cell(row=r, column=date_col).value
+                    sheet.cell(row=dash_row, column=dash_col).value = value
+                    break
+
+        workbook.save(file_path)
+        print("DEBUG: Dashboard values updated.")
+
+    except Exception as e:
+        logging.error(f"Dashboard update failed: {e}")
+        messagebox.showerror("Error", f"Dashboard update failed: {e}")
+
+def build_dashboard_layout(sheet):
+    # Add static header layout with merged cells and colors
+    yellow_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+    red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+    center_align = Alignment(horizontal="center", vertical="center")
+    bold_font = Font(bold=True)
+
+    # Safety Section
+    sheet.merge_cells("B1:G1")
+    sheet["B1"] = "Safety"
+    sheet["B1"].fill = yellow_fill
+    sheet["B1"].alignment = center_align
+    sheet["B1"].font = bold_font
+
+    sheet["B2"] = "Days Without Incident"
+    sheet["B3"] = "Haz ID's"
+    sheet["B4"] = "Safety Gemba Walk"
+    sheet["B5"] = "7S (Zone 26)"
+    sheet["B6"] = "7S (Zone 51)"
+
+    # Quality Section
+    sheet.merge_cells("B8:D8")
+    sheet["B8"] = "Quality"
+    sheet["B8"].fill = PatternFill(start_color="00FFCC", end_color="00FFCC", fill_type="solid")
+    sheet["B8"].alignment = center_align
+    sheet["B8"].font = bold_font
+
+    sheet["B9"] = "Errors"
+    sheet["B10"] = "PCD Returns"
+
+    # Operations Section
+    sheet.merge_cells("B12:E12")
+    sheet["B12"] = "Operations"
+    sheet["B12"].fill = PatternFill(start_color="99CCFF", end_color="99CCFF", fill_type="solid")
+    sheet["B12"].alignment = center_align
+    sheet["B12"].font = bold_font
+
+    sheet["B13"] = "Jobs on Hold"
+    sheet["B14"] = "Productivity"
+    sheet["B15"] = "OTIF"
+    sheet["B16"] = "Truck Fill %"
+
+    # People Section
+    sheet.merge_cells("B18:D18")
+    sheet["B18"] = "People"
+    sheet["B18"].fill = PatternFill(start_color="FFCC99", end_color="FFCC99", fill_type="solid")
+    sheet["B18"].alignment = center_align
+    sheet["B18"].font = bold_font
+
+    sheet["B19"] = "Recognitions"
+    sheet["B20"] = "MC Compliance"
+
+    # Extras (PPI, Cost, etc.) could be added here similarly
+
+    # Autofit columns
+    for col in range(2, 6):
+        sheet.column_dimensions[get_column_letter(col)].width = 25
